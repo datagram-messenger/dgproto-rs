@@ -43,9 +43,6 @@
 //!
 //! See `docs/protocol/dgproto-v1.md` §4.4.1 for the normative specification.
 
-// This completed layer is wired into Session once that layer is implemented.
-#![allow(dead_code)]
-
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 
@@ -73,6 +70,7 @@ pub(crate) struct RekeyState {
 
 impl RekeyState {
     /// Create initial rekey state at handshake epoch 1.
+    #[allow(dead_code)]
     pub(crate) const fn new() -> Self {
         Self { epoch: 1 }
     }

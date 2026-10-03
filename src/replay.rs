@@ -24,9 +24,6 @@
 //!
 //! See `docs/protocol/dgproto-v1.md` §4.5 for the normative specification.
 
-// This completed layer is wired into Session once that layer is implemented.
-#![allow(dead_code)]
-
 /// Number of sequence-number slots tracked by the window.
 pub(crate) const WINDOW_SIZE: usize = crate::REPLAY_WINDOW_SIZE; // 2048
 const WORD_COUNT: usize = WINDOW_SIZE / 64; // 32
