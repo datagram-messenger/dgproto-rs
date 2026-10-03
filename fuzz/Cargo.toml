@@ -4,9 +4,8 @@ version = "0.0.0"
 publish = false
 edition = "2021"
 
-[package.metadata.cargo-fuzz]
-# Pass --cfg fuzzing so lib.rs exposes internal parsers for fuzz targets.
-rustflags = ["--cfg", "fuzzing"]
+[package.metadata]
+cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
