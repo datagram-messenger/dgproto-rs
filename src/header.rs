@@ -98,7 +98,7 @@ impl MessageType {
 /// that AEAD authenticates the exact header. Senders must leave `reserved`
 /// zero.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct Header {
+pub struct Header {
     /// Protocol version — always `VERSION` (0x01).
     pub version: u8,
     /// Frame flags byte (see `Flags` constants).

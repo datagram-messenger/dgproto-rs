@@ -19,7 +19,8 @@ use crate::{
 /// authentication tag; it is all-zero and ignored for handshake frames.
 /// `padding` is the cleartext random padding (0–255 bytes).
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct Frame {
+#[cfg_attr(not(fuzzing), allow(dead_code))]
+pub struct Frame {
     pub header: Header,
     /// Ciphertext payload (or Noise message for handshake frames).
     pub payload: Vec<u8>,

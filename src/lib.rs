@@ -53,16 +53,35 @@
 //! [DGProto v1 specification]: https://github.com/datagram-messenger/dgproto-go/blob/main/docs/protocol/dgproto-v1.md
 
 // ── Internal modules (pub(crate) — not part of the public API) ────────────────
+// When building with `cargo fuzz` the fuzzing cfg flag is set, and we need
+// these modules to be fully public so that lib.rs can re-export their types
+// to the fuzz targets.  In every other build they remain crate-private.
 
+#[cfg_attr(fuzzing, allow(unreachable_pub))]
 pub(crate) mod codec;
+#[cfg(not(fuzzing))]
 pub(crate) mod frame;
+#[cfg(fuzzing)]
+pub mod frame;
+#[cfg(not(fuzzing))]
 pub(crate) mod handshake;
+#[cfg(fuzzing)]
+pub mod handshake;
+#[cfg(not(fuzzing))]
 pub(crate) mod header;
+#[cfg(fuzzing)]
+pub mod header;
+#[cfg(not(fuzzing))]
 pub(crate) mod messages;
+#[cfg(fuzzing)]
+pub mod messages;
 pub(crate) mod rekey;
 pub(crate) mod replay;
 pub(crate) mod session;
+#[cfg(not(fuzzing))]
 pub(crate) mod tlv;
+#[cfg(fuzzing)]
+pub mod tlv;
 pub(crate) mod transport;
 
 // ── Public modules ────────────────────────────────────────────────────────────

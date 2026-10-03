@@ -101,7 +101,7 @@ pub(crate) fn encode_tlvs(tlvs: &[Tlv]) -> Result<Vec<u8>, Error> {
 /// Protocol-wide size and element limits always apply. A positive `max_bytes`
 /// imposes a tighter caller limit. Unknown types are preserved; padding is
 /// ignored; values are copied.
-pub(crate) fn decode_tlvs(data: &[u8], max_bytes: usize) -> Result<Vec<Tlv>, Error> {
+pub fn decode_tlvs(data: &[u8], max_bytes: usize) -> Result<Vec<Tlv>, Error> {
     if data.len() > MAX_TLV_SEQUENCE_SIZE {
         return Err(Error::TlvSequenceLimit);
     }

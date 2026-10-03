@@ -65,7 +65,7 @@ const NOISE_PATTERN_XX: u8 = 1;
 ///
 /// Wire: `[pattern u8][reserved 3 bytes][client_ephemeral 32 bytes]` = 36 bytes.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct HandshakeInit {
+pub struct HandshakeInit {
     /// 32-byte client ephemeral public key.
     pub client_ephemeral: [u8; 32],
     /// Additional Noise payload bytes (must be empty for MVP).
@@ -124,7 +124,7 @@ impl HandshakeInit {
 ///
 /// Wire: `[server_ephemeral 32 bytes][noise_payload 64 bytes]` = 96 bytes.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct HandshakeResponse {
+pub struct HandshakeResponse {
     /// 32-byte server ephemeral public key.
     pub server_ephemeral: [u8; 32],
     /// 64-byte Noise message 2 payload.
@@ -161,7 +161,7 @@ impl HandshakeResponse {
 ///
 /// Wire: `[noise_payload 64 bytes]`.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct HandshakeFinish {
+pub struct HandshakeFinish {
     /// 64-byte Noise message 3.
     pub noise_payload: Vec<u8>,
 }
@@ -243,7 +243,7 @@ impl EncryptedData {
 ///
 /// Wire: `[is_response u8 (0 or 1)][nonce u64 LE]` = 9 bytes.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct PingPong {
+pub struct PingPong {
     /// `true` for a pong (response), `false` for a ping (request).
     pub is_response: bool,
     /// Nonce correlating a pong with its ping.
@@ -323,7 +323,7 @@ impl Ack {
 ///
 /// Wire: `[epoch u32 LE][key_confirm 32 bytes]` = 36 bytes.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct RekeyInit {
+pub struct RekeyInit {
     /// Proposed new epoch number (must be current + 1).
     pub epoch: u32,
     /// HMAC-SHA256 key confirmation for the new epoch.
