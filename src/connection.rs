@@ -48,14 +48,14 @@ use crate::{
     header::{Header, MessageType},
     messages::{Ack, EncryptedData, ErrorMessage, PingPong, SessionClose},
     session::{EncryptResult, Session},
-    transport::TcpTransport,
+    transport::{TcpTransport, Transport},
     Error, StaticKey,
 };
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
 /// Configuration for a client connection.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ClientConfig {
     /// Client Noise static identity key.
     pub static_key: StaticKey,
@@ -110,6 +110,26 @@ impl Default for ClientConfig {
             handler_queue: 64,
             handler: None,
         }
+    }
+}
+
+impl std::fmt::Debug for ClientConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ClientConfig")
+            .field("static_key", &self.static_key)
+            .field("server_static_hint", &self.server_static_hint)
+            .field("handshake_timeout", &self.handshake_timeout)
+            .field("write_timeout", &self.write_timeout)
+            .field("idle_timeout", &self.idle_timeout)
+            .field("keepalive_interval", &self.keepalive_interval)
+            .field("keepalive_timeout", &self.keepalive_timeout)
+            .field("outbound_queue", &self.outbound_queue)
+            .field("handler_queue", &self.handler_queue)
+            .field(
+                "handler",
+                &self.handler.as_ref().map(|_| "<MessageHandler>"),
+            )
+            .finish()
     }
 }
 
@@ -225,10 +245,12 @@ impl Connection {
         let handshake_timeout = config.handshake_timeout;
         let conn = tokio::time::timeout(handshake_timeout, Self::do_connect(addr, config))
             .await
-            .map_err(|_| Error::Io(std::io::Error::new(
-                std::io::ErrorKind::TimedOut,
-                "handshake timed out",
-            )))??;
+            .map_err(|_| {
+                Error::Io(std::io::Error::new(
+                    std::io::ErrorKind::TimedOut,
+                    "handshake timed out",
+                ))
+            })??;
         Ok(conn)
     }
 
@@ -243,7 +265,8 @@ impl Connection {
         let transport = Arc::new(TcpTransport::new(stream));
 
         // 2. Noise XX handshake (initiator).
-        let mut hs = InitiatorHandshake::new(&config.static_key)?;
+        let mut hs =
+            InitiatorHandshake::new(&config.static_key, config.server_static_hint.as_ref())?;
 
         // Flight 1: send HandshakeInit.
         let init_payload = hs.write_init()?;
@@ -284,14 +307,8 @@ impl Connection {
         };
         transport.write_frame(&finish_frame, Duration::ZERO).await?;
 
-        // Verify server static key if a hint was provided.
-        let peer_static = hs.peer_static();
-        if let Some(hint) = config.server_static_hint {
-            use subtle::ConstantTimeEq;
-            if peer_static.ct_eq(&hint).unwrap_u8() != 1 {
-                return Err(Error::Handshake);
-            }
-        }
+        // The handshake already verified the peer static key if a hint was provided.
+        let peer_static = secrets.peer_static;
 
         // 3. Open session.
         let session = Arc::new(Session::new(secrets)?);
@@ -320,7 +337,9 @@ impl Connection {
             closing: AtomicBool::new(false),
         });
 
-        let conn = Connection { inner: inner.clone() };
+        let conn = Connection {
+            inner: inner.clone(),
+        };
 
         // Spawn read loop.
         {
@@ -374,7 +393,11 @@ impl Connection {
         }
         self.inner
             .outbound
-            .try_send(QueuedMessage { msg: msg.into(), pad_len, completion: None })
+            .try_send(QueuedMessage {
+                msg: msg.into(),
+                pad_len,
+                completion: None,
+            })
             .map_err(|_| Error::OutboundQueueFull)
     }
 
@@ -389,7 +412,11 @@ impl Connection {
         let (tx, rx) = oneshot::channel();
         self.inner
             .outbound
-            .send(QueuedMessage { msg: msg.into(), pad_len: 0, completion: Some(tx) })
+            .send(QueuedMessage {
+                msg: msg.into(),
+                pad_len: 0,
+                completion: Some(tx),
+            })
             .await
             .map_err(|_| Error::ConnectionClosed)?;
         rx.await.map_err(|_| Error::ConnectionClosed)?
@@ -399,7 +426,10 @@ impl Connection {
     pub async fn close(&self) -> Result<(), Error> {
         let (tx, rx) = oneshot::channel();
         let req = CloseRequest {
-            message: SessionClose { code: crate::messages::CloseCode::Normal, reason: String::new() },
+            message: SessionClose {
+                code: crate::messages::CloseCode::Normal,
+                reason: String::new(),
+            },
             cause: Error::ConnectionClosed,
             result: tx,
         };
@@ -469,7 +499,10 @@ impl Connection {
 
             let plaintext = match self.inner.session.decrypt_frame(&frame).await {
                 Ok(p) => p,
-                Err(e) => { self.shutdown(e); return; }
+                Err(e) => {
+                    self.shutdown(e);
+                    return;
+                }
             };
 
             self.note_activity();
@@ -482,15 +515,23 @@ impl Connection {
                                 let _ = self.inner.pong_tx.try_send(ping.nonce);
                             } else {
                                 // Echo back as pong.
-                                let pong = PingPong { is_response: true, nonce: ping.nonce };
-                                let _ = self.send_internal(
-                                    MessageType::PingPong,
-                                    &pong.marshal_binary().unwrap_or_default(),
-                                    0,
-                                ).await;
+                                let pong = PingPong {
+                                    is_response: true,
+                                    nonce: ping.nonce,
+                                };
+                                let _ = self
+                                    .send_internal(
+                                        MessageType::PingPong,
+                                        &pong.marshal_binary().unwrap_or_default(),
+                                        0,
+                                    )
+                                    .await;
                             }
                         }
-                        Err(e) => { self.shutdown(e); return; }
+                        Err(e) => {
+                            self.shutdown(e);
+                            return;
+                        }
                     }
                 }
                 MessageType::SessionClose => {
@@ -505,9 +546,14 @@ impl Connection {
                     if let Some(handler) = &self.inner.config.handler {
                         let app_msg = match parse_inbound(&frame, &plaintext) {
                             Ok(m) => m,
-                            Err(e) => { self.shutdown(e); return; }
+                            Err(e) => {
+                                self.shutdown(e);
+                                return;
+                            }
                         };
-                        let conn = Connection { inner: self.inner.clone() };
+                        let conn = Connection {
+                            inner: self.inner.clone(),
+                        };
                         if let Err(e) = (handler)(Arc::new(conn), app_msg).await {
                             self.shutdown(e);
                             return;
@@ -540,15 +586,22 @@ impl Connection {
                     let (msg_type, payload) = match app_msg_to_wire(&item.msg) {
                         Ok(v) => v,
                         Err(e) => {
-                            if let Some(tx) = item.completion { let _ = tx.send(Err(e.clone())); }
+                            if let Some(tx) = item.completion { let _ = tx.send(Err(Error::ConnectionClosed)); }
                             self.shutdown(e);
                             return;
                         }
                     };
                     let result = self.send_internal(msg_type, &payload, item.pad_len).await;
-                    let failed = result.is_err();
-                    if let Some(tx) = item.completion { let _ = tx.send(result.clone()); }
-                    if failed { self.shutdown(result.unwrap_err()); return; }
+                    match result {
+                        Ok(()) => {
+                            if let Some(tx) = item.completion { let _ = tx.send(Ok(())); }
+                        }
+                        Err(e) => {
+                            if let Some(tx) = item.completion { let _ = tx.send(Err(Error::ConnectionClosed)); }
+                            self.shutdown(e);
+                            return;
+                        }
+                    }
                 }
                 _ = self.inner.cancel.cancelled() => return,
             }
@@ -575,10 +628,20 @@ impl Connection {
 
         loop {
             let idle_tick = async {
-                if let Some(ref mut t) = idle_interval { t.tick().await; true } else { std::future::pending::<bool>().await }
+                if let Some(ref mut t) = idle_interval {
+                    t.tick().await;
+                    true
+                } else {
+                    std::future::pending::<bool>().await
+                }
             };
             let keepalive_tick = async {
-                if let Some(ref mut t) = keepalive_interval { t.tick().await; true } else { std::future::pending::<bool>().await }
+                if let Some(ref mut t) = keepalive_interval {
+                    t.tick().await;
+                    true
+                } else {
+                    std::future::pending::<bool>().await
+                }
             };
             let pong_expired = async {
                 if let Some(deadline) = pong_deadline {
@@ -643,14 +706,22 @@ impl Connection {
         pad_len: u8,
     ) -> Result<(), Error> {
         loop {
-            match self.inner.session.encrypt_frame(msg_type, plaintext, pad_len).await? {
+            match self
+                .inner
+                .session
+                .encrypt_frame(msg_type, plaintext, pad_len)
+                .await?
+            {
                 EncryptResult::Frame(frame) => {
-                    return self.inner.transport
+                    return self
+                        .inner
+                        .transport
                         .write_frame(&frame, self.inner.config.write_timeout)
                         .await;
                 }
                 EncryptResult::NeedsRekey(rekey_frame) => {
-                    self.inner.transport
+                    self.inner
+                        .transport
                         .write_frame(&rekey_frame, self.inner.config.write_timeout)
                         .await?;
                     self.inner.session.mark_rekey_sent(&rekey_frame).await?;
@@ -676,16 +747,16 @@ fn app_msg_to_wire(msg: &ApplicationMessage) -> Result<(MessageType, Vec<u8>), E
 
 fn parse_inbound(frame: &Frame, plaintext: &[u8]) -> Result<ApplicationMessage, Error> {
     match frame.header.msg_type {
-        MessageType::EncryptedData => {
-            Ok(ApplicationMessage::EncryptedData(EncryptedData::unmarshal_binary(plaintext)?))
-        }
+        MessageType::EncryptedData => Ok(ApplicationMessage::EncryptedData(
+            EncryptedData::unmarshal_binary(plaintext)?,
+        )),
         MessageType::Ack => Ok(ApplicationMessage::Ack(Ack::unmarshal_binary(plaintext)?)),
-        MessageType::Error => {
-            Ok(ApplicationMessage::ErrorMessage(ErrorMessage::unmarshal_binary(plaintext)?))
-        }
-        MessageType::SessionClose => {
-            Ok(ApplicationMessage::SessionClose(SessionClose::unmarshal_binary(plaintext)?))
-        }
+        MessageType::Error => Ok(ApplicationMessage::ErrorMessage(
+            ErrorMessage::unmarshal_binary(plaintext)?,
+        )),
+        MessageType::SessionClose => Ok(ApplicationMessage::SessionClose(
+            SessionClose::unmarshal_binary(plaintext)?,
+        )),
         _ => Err(Error::MessageType),
     }
 }
