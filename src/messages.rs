@@ -91,6 +91,7 @@ impl HandshakeInit {
         Ok(buf)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
         if data.len() < HANDSHAKE_INIT_FIXED_SIZE {
             return Err(Error::MessageTooShort);
@@ -131,6 +132,7 @@ pub(crate) struct HandshakeResponse {
 }
 
 impl HandshakeResponse {
+    #[allow(dead_code)]
     pub(crate) fn marshal_binary(&self) -> Result<Vec<u8>, Error> {
         let total = HANDSHAKE_RESPONSE_FIXED_SIZE + self.noise_payload.len();
         if total != HANDSHAKE_RESPONSE_FIXED_SIZE + 64 {
@@ -165,6 +167,7 @@ pub(crate) struct HandshakeFinish {
 }
 
 impl HandshakeFinish {
+    #[allow(dead_code)]
     pub(crate) fn marshal_binary(&self) -> Result<Vec<u8>, Error> {
         if self.noise_payload.len() != HANDSHAKE_FINISH_FIXED_SIZE {
             return Err(Error::MessageLength);
@@ -172,6 +175,7 @@ impl HandshakeFinish {
         Ok(self.noise_payload.clone())
     }
 
+    #[allow(dead_code)]
     pub(crate) fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
         if data.len() != HANDSHAKE_FINISH_FIXED_SIZE {
             return Err(Error::MessageLength);

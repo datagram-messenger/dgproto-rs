@@ -37,10 +37,12 @@ pub(crate) struct Flags;
 
 impl Flags {
     /// Bit 0 — reserved for post-MVP obfuscation. MUST NOT be sent.
+    #[allow(dead_code)]
     pub(crate) const OBFUSCATED: u8 = 1 << 0;
     /// Bit 1 — set iff `pad_length > 0`.
     pub(crate) const PADDING: u8 = 1 << 1;
     /// Bit 2 — reserved for post-MVP 0-RTT. MUST NOT be sent.
+    #[allow(dead_code)]
     pub(crate) const ZERO_RTT: u8 = 1 << 2;
 }
 
