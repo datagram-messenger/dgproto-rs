@@ -34,6 +34,7 @@ const WORD_COUNT: usize = WINDOW_SIZE / 64; // 32
 /// A 2048-entry sliding bitmap replay window.
 ///
 /// Not `Send` or `Sync` on its own — `Session` wraps it in a `Mutex`.
+#[derive(Clone)]
 pub(crate) struct ReplayWindow {
     highest: u64,
     bitmap: [u64; WORD_COUNT],
@@ -44,6 +45,7 @@ pub(crate) struct ReplayWindow {
 ///
 /// Must be passed to [`ReplayWindow::commit`] after successful authentication.
 /// Becomes stale after any intervening commit.
+#[derive(Clone)]
 pub(crate) struct ReplayToken {
     sequence: u64,
     generation: u64,

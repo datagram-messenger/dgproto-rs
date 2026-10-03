@@ -286,6 +286,13 @@ pub enum Error {
     #[error("dgproto: send sequence exhausted")]
     SequenceExhausted,
 
+    /// A `RekeyInit` frame was generated but not yet confirmed as transmitted.
+    /// All sends are blocked until `mark_rekey_sent` is called.
+    ///
+    /// Go equivalent: `ErrRekeyPending`
+    #[error("dgproto: rekey frame has not been marked sent")]
+    RekeyPending,
+
     // ── L3: Rekey ─────────────────────────────────────────────────────────────
     /// A rekey epoch is not the immediate successor of the current epoch.
     ///
