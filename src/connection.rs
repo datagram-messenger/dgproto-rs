@@ -159,7 +159,7 @@ impl Connection {
         // TODO: implement
         // 1. tokio::net::TcpStream::connect(addr)
         // 2. TcpTransport::new(stream)
-        // 3. HandshakeState::new(config.static_key)
+        // 3. InitiatorHandshake::new(config.static_key)
         // 4. write_init -> read_response -> write_finish -> HandshakeSecrets
         // 5. Session::new(secrets)
         // 6. Spawn read_loop, write_loop, maintenance_loop
