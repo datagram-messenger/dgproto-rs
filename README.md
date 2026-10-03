@@ -196,8 +196,7 @@ DGProto v1 is security-sensitive infrastructure. Key properties of this implemen
 
 > [!CAUTION]
 > Report vulnerabilities **privately**. Do not open public issues for suspected security bugs.
-> See [`SECURITY.md`](https://github.com/datagram-messenger/dgproto-go/blob/main/SECURITY.md)
-> in the reference implementation.
+> See [`SECURITY.md`](SECURITY.md).
 
 ---
 
@@ -236,3 +235,5 @@ cargo +1.80 test
 - [dgproto-go — Go reference implementation](https://github.com/datagram-messenger/dgproto-go)
 - [datagram-server — Go application server](https://github.com/datagram-messenger/server)
 - [API reference (docs.rs)](https://docs.rs/dgproto)
+- [Security](SECURITY.md)
+- [Contributing](.github/CONTRIBUTING.md)
