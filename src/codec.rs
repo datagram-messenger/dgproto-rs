@@ -103,7 +103,10 @@ impl Codec {
             .aead
             .encrypt(
                 &nonce,
-                Payload { msg: plaintext, aad: &aad },
+                Payload {
+                    msg: plaintext,
+                    aad: &aad,
+                },
             )
             .map_err(|_| Error::Authentication)?;
 
@@ -142,7 +145,10 @@ impl Codec {
         self.aead
             .decrypt(
                 &nonce,
-                Payload { msg: &sealed, aad: &aad },
+                Payload {
+                    msg: &sealed,
+                    aad: &aad,
+                },
             )
             .map_err(|_| Error::Authentication)
     }
@@ -230,7 +236,13 @@ mod tests {
     fn test_codec_decrypt_tampered_ciphertext() {
         let codec = Codec::new(&test_key()).expect("new codec");
         let mut frame = codec
-            .encrypt(MessageType::EncryptedData, test_session_id(), 1, b"secret", &[])
+            .encrypt(
+                MessageType::EncryptedData,
+                test_session_id(),
+                1,
+                b"secret",
+                &[],
+            )
             .expect("encrypt");
         // Flip a bit in the ciphertext.
         frame.payload[0] ^= 0xFF;
@@ -241,7 +253,13 @@ mod tests {
     fn test_codec_decrypt_tampered_tag() {
         let codec = Codec::new(&test_key()).expect("new codec");
         let mut frame = codec
-            .encrypt(MessageType::EncryptedData, test_session_id(), 1, b"secret", &[])
+            .encrypt(
+                MessageType::EncryptedData,
+                test_session_id(),
+                1,
+                b"secret",
+                &[],
+            )
             .expect("encrypt");
         frame.tag[0] ^= 0xFF;
         assert!(matches!(codec.decrypt(&frame), Err(Error::Authentication)));
@@ -252,7 +270,13 @@ mod tests {
         let codec = Codec::new(&test_key()).expect("new codec");
         let padding = [0xAAu8; 4];
         let mut frame = codec
-            .encrypt(MessageType::EncryptedData, test_session_id(), 1, b"data", &padding)
+            .encrypt(
+                MessageType::EncryptedData,
+                test_session_id(),
+                1,
+                b"data",
+                &padding,
+            )
             .expect("encrypt");
         // Flip a bit in the padding (which is part of AAD).
         frame.padding[0] ^= 0xFF;
@@ -264,12 +288,27 @@ mod tests {
         let codec = Codec::new(&test_key()).expect("new codec");
         // Two frames with different sequences must produce different ciphertexts.
         let f1 = codec
-            .encrypt(MessageType::EncryptedData, test_session_id(), 1, b"same", &[])
+            .encrypt(
+                MessageType::EncryptedData,
+                test_session_id(),
+                1,
+                b"same",
+                &[],
+            )
             .expect("encrypt 1");
         let f2 = codec
-            .encrypt(MessageType::EncryptedData, test_session_id(), 2, b"same", &[])
+            .encrypt(
+                MessageType::EncryptedData,
+                test_session_id(),
+                2,
+                b"same",
+                &[],
+            )
             .expect("encrypt 2");
-        assert_ne!(f1.payload, f2.payload, "different sequences must produce different ciphertexts");
+        assert_ne!(
+            f1.payload, f2.payload,
+            "different sequences must produce different ciphertexts"
+        );
     }
 
     #[test]
@@ -305,6 +344,9 @@ mod tests {
         // First 4 bytes must be zero.
         assert_eq!(&nonce[..4], &[0u8; 4]);
         // Next 8 bytes are the sequence in little-endian.
-        assert_eq!(&nonce[4..], &[0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01]);
+        assert_eq!(
+            &nonce[4..],
+            &[0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01]
+        );
     }
 }

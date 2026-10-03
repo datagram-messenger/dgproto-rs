@@ -46,7 +46,10 @@ impl Tlv {
         if value.len() > MAX_TLV_VALUE_SIZE {
             return Err(Error::TlvValueTooLarge);
         }
-        Ok(Self { typ, value: value.to_vec() })
+        Ok(Self {
+            typ,
+            value: value.to_vec(),
+        })
     }
 
     /// Encoded wire length including zero-alignment padding to a 4-byte boundary.

@@ -38,8 +38,10 @@ use crate::{
     handshake::HandshakeSecrets,
     header::MessageType,
     messages::RekeyInit,
+    rekey::{
+        RekeyState, REKEY_FRAME_LIMIT, REKEY_GRACE_FRAMES, REKEY_GRACE_PERIOD, REKEY_INTERVAL,
+    },
     replay::{ReplayToken, ReplayWindow},
-    rekey::{RekeyState, REKEY_FRAME_LIMIT, REKEY_GRACE_FRAMES, REKEY_GRACE_PERIOD, REKEY_INTERVAL},
     Error, KEY_SIZE,
 };
 
@@ -243,7 +245,10 @@ impl Session {
         let candidate = decrypt_epoch_locked(&mut r, frame)?;
 
         if !candidate.current && frame.header.msg_type == MessageType::RekeyInit {
-            return Err(Error::InvalidEpoch { got: r.epoch, want: r.epoch + 1 });
+            return Err(Error::InvalidEpoch {
+                got: r.epoch,
+                want: r.epoch + 1,
+            });
         }
 
         if candidate.current && frame.header.msg_type == MessageType::RekeyInit {
@@ -256,10 +261,7 @@ impl Session {
             committed_replay.commit(candidate.token)?;
 
             // Atomic transition.
-            r.previous_codec = Some(std::mem::replace(
-                &mut r.codec,
-                next_codec,
-            ));
+            r.previous_codec = Some(std::mem::replace(&mut r.codec, next_codec));
             r.previous_replay = committed_replay;
             r.key = next_key;
             r.epoch = init.epoch;
@@ -326,9 +328,15 @@ fn encrypt_locked(
     }
     let sequence = s.next_sequence;
     let padding = vec![0u8; pad_len as usize];
-    let frame = s.codec.encrypt(msg_type, session_id, sequence, plaintext, &padding)?;
+    let frame = s
+        .codec
+        .encrypt(msg_type, session_id, sequence, plaintext, &padding)?;
     // Advance sequence; 0 signals exhaustion on the next call.
-    s.next_sequence = if sequence == u64::MAX { 0 } else { sequence + 1 };
+    s.next_sequence = if sequence == u64::MAX {
+        0
+    } else {
+        sequence + 1
+    };
     s.sent_in_epoch += 1;
     Ok(frame)
 }
@@ -342,7 +350,10 @@ fn begin_rekey_locked(s: &mut SendState, session_id: [u8; 16]) -> Result<Frame, 
     let next_epoch = s.epoch + 1;
     let rekey_state = RekeyState { epoch: s.epoch };
     let confirm = rekey_state.compute_key_confirm(&s.key, next_epoch)?;
-    let init = RekeyInit { epoch: next_epoch, key_confirm: confirm };
+    let init = RekeyInit {
+        epoch: next_epoch,
+        key_confirm: confirm,
+    };
     let payload = init.marshal_binary()?;
     // Encrypt the RekeyInit as the last frame of the current epoch.
     let frame = encrypt_locked(s, session_id, MessageType::RekeyInit, &payload, 0)?;
@@ -366,10 +377,7 @@ struct DecryptCandidate {
 
 /// Try to decrypt `frame` under the current epoch, then (if grace window is
 /// active) under the previous epoch. Returns the first successful candidate.
-fn decrypt_epoch_locked(
-    r: &mut RecvState,
-    frame: &Frame,
-) -> Result<DecryptCandidate, Error> {
+fn decrypt_epoch_locked(r: &mut RecvState, frame: &Frame) -> Result<DecryptCandidate, Error> {
     let seq = frame.header.sequence;
 
     // Try current epoch.
@@ -377,7 +385,11 @@ fn decrypt_epoch_locked(
     if let Ok(ref token) = current_check {
         match r.codec.decrypt(frame) {
             Ok(plaintext) => {
-                return Ok(DecryptCandidate { plaintext, current: true, token: token.clone() });
+                return Ok(DecryptCandidate {
+                    plaintext,
+                    current: true,
+                    token: token.clone(),
+                });
             }
             Err(e) if !matches!(e, Error::Authentication) => return Err(e),
             _ => {}
@@ -422,16 +434,16 @@ fn decrypt_epoch_locked(
 
 /// Validate a `RekeyInit` payload and derive the next key/codec.
 /// Does NOT mutate any state (pure validation).
-fn prepare_rekey_locked(
-    r: &RecvState,
-    init: &RekeyInit,
-) -> Result<([u8; KEY_SIZE], Codec), Error> {
+fn prepare_rekey_locked(r: &RecvState, init: &RekeyInit) -> Result<([u8; KEY_SIZE], Codec), Error> {
     if r.epoch == u32::MAX {
         return Err(Error::EpochExhausted);
     }
     let want_epoch = r.epoch + 1;
     if init.epoch != want_epoch {
-        return Err(Error::InvalidEpoch { got: init.epoch, want: want_epoch });
+        return Err(Error::InvalidEpoch {
+            got: init.epoch,
+            want: want_epoch,
+        });
     }
     let rekey_state = RekeyState { epoch: r.epoch };
     let expected = rekey_state.compute_key_confirm(&r.key, init.epoch)?;
@@ -491,8 +503,7 @@ mod tests {
         let send_key = [0x11u8; 32];
         let recv_key = [0x22u8; 32];
         // Sender session: send_key for encrypt, recv_key for decrypt.
-        let sender = Session::new(make_secrets(send_key, recv_key))
-            .expect("sender session");
+        let sender = Session::new(make_secrets(send_key, recv_key)).expect("sender session");
         // Receiver session: recv_key for decrypt (uses sender's send_key).
         let receiver = Session::new(HandshakeSecrets {
             session_id: [1u8; 16],
@@ -518,8 +529,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_session_sequence_starts_at_one() {
-        let session = Session::new(make_secrets([1u8; 32], [2u8; 32]))
-            .expect("session");
+        let session = Session::new(make_secrets([1u8; 32], [2u8; 32])).expect("session");
         let result = session
             .encrypt_frame(MessageType::EncryptedData, b"x", 0)
             .await
@@ -533,8 +543,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_session_rejects_handshake_types_in_encrypt() {
-        let session = Session::new(make_secrets([1u8; 32], [2u8; 32]))
-            .expect("session");
+        let session = Session::new(make_secrets([1u8; 32], [2u8; 32])).expect("session");
         // HandshakeInit and HandshakeResponse are not valid session message types.
         for mt in [MessageType::HandshakeInit, MessageType::HandshakeResponse] {
             let err = session
@@ -547,8 +556,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_session_closed_returns_error() {
-        let session = Session::new(make_secrets([1u8; 32], [2u8; 32]))
-            .expect("session");
+        let session = Session::new(make_secrets([1u8; 32], [2u8; 32])).expect("session");
         session.close().await;
         let err = session
             .encrypt_frame(MessageType::EncryptedData, b"x", 0)

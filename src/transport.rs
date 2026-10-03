@@ -29,10 +29,7 @@ use tokio::{
     sync::Mutex,
 };
 
-use crate::{
-    frame::Frame,
-    Error, HEADER_SIZE, MAX_FRAME_SIZE,
-};
+use crate::{frame::Frame, Error, HEADER_SIZE, MAX_FRAME_SIZE};
 
 // ── Transport trait ───────────────────────────────────────────────────────────
 
@@ -97,7 +94,9 @@ impl Transport for TcpTransport {
 
             // Read the fixed 40-byte header.
             let mut header_wire = [0u8; HEADER_SIZE];
-            read.read_exact(&mut header_wire).await.map_err(map_io_err)?;
+            read.read_exact(&mut header_wire)
+                .await
+                .map_err(map_io_err)?;
 
             // Parse the header to determine body length.
             let header = crate::header::Header::unmarshal_binary(&header_wire)?;
@@ -116,7 +115,9 @@ impl Transport for TcpTransport {
             let mut wire = vec![0u8; frame_size];
             wire[..HEADER_SIZE].copy_from_slice(&header_wire);
             if body_len > 0 {
-                read.read_exact(&mut wire[HEADER_SIZE..]).await.map_err(map_io_err)?;
+                read.read_exact(&mut wire[HEADER_SIZE..])
+                    .await
+                    .map_err(map_io_err)?;
             }
 
             Frame::unmarshal_binary(&wire)
@@ -125,12 +126,12 @@ impl Transport for TcpTransport {
         if timeout.is_zero() {
             fut.await
         } else {
-            tokio::time::timeout(timeout, fut)
-                .await
-                .map_err(|_| Error::Io(std::io::Error::new(
+            tokio::time::timeout(timeout, fut).await.map_err(|_| {
+                Error::Io(std::io::Error::new(
                     std::io::ErrorKind::TimedOut,
                     "read_frame timed out",
-                )))?
+                ))
+            })?
         }
     }
 
@@ -152,12 +153,12 @@ impl Transport for TcpTransport {
         if timeout.is_zero() {
             fut.await
         } else {
-            tokio::time::timeout(timeout, fut)
-                .await
-                .map_err(|_| Error::Io(std::io::Error::new(
+            tokio::time::timeout(timeout, fut).await.map_err(|_| {
+                Error::Io(std::io::Error::new(
                     std::io::ErrorKind::TimedOut,
                     "write_frame timed out",
-                )))?
+                ))
+            })?
         }
     }
 
@@ -200,13 +201,7 @@ mod tests {
 
     /// Build a minimal handshake frame (no AEAD tag) for transport tests.
     fn make_handshake_frame() -> Frame {
-        let header = Header::new(
-            MessageType::HandshakeInit,
-            [0u8; 16],
-            0,
-            36,
-            0,
-        );
+        let header = Header::new(MessageType::HandshakeInit, [0u8; 16], 0, 36, 0);
         Frame {
             header,
             payload: vec![0u8; 36],
@@ -226,7 +221,10 @@ mod tests {
         let server = tokio::spawn(async move {
             let (stream, _) = listener.accept().await.expect("accept");
             let transport = TcpTransport::new(stream);
-            transport.read_frame(Duration::ZERO).await.expect("server read_frame")
+            transport
+                .read_frame(Duration::ZERO)
+                .await
+                .expect("server read_frame")
         });
 
         let client_stream = TcpStream::connect(addr).await.expect("connect");
@@ -258,7 +256,10 @@ mod tests {
         server.await.expect("server task");
 
         // After server closes, reading should fail.
-        let err = client.read_frame(Duration::ZERO).await.expect_err("should fail");
+        let err = client
+            .read_frame(Duration::ZERO)
+            .await
+            .expect_err("should fail");
         assert!(
             matches!(err, Error::TransportClosed | Error::Io(_)),
             "unexpected error: {err:?}"

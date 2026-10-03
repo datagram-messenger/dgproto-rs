@@ -112,7 +112,10 @@ impl HandshakeInit {
         }
         let mut ephemeral = [0u8; 32];
         ephemeral.copy_from_slice(&data[4..36]);
-        Ok(Self { client_ephemeral: ephemeral, noise_payload: vec![] })
+        Ok(Self {
+            client_ephemeral: ephemeral,
+            noise_payload: vec![],
+        })
     }
 }
 
@@ -173,7 +176,9 @@ impl HandshakeFinish {
         if data.len() != HANDSHAKE_FINISH_FIXED_SIZE {
             return Err(Error::MessageLength);
         }
-        Ok(Self { noise_payload: data.to_vec() })
+        Ok(Self {
+            noise_payload: data.to_vec(),
+        })
     }
 }
 
@@ -222,7 +227,11 @@ impl EncryptedData {
         reject_duplicate_tlvs(&tlvs)?;
         // Re-encode to get canonical fields bytes.
         let fields = encode_tlvs(&tlvs)?;
-        Ok(Self { stream_id, app_message_type, fields })
+        Ok(Self {
+            stream_id,
+            app_message_type,
+            fields,
+        })
     }
 }
 
@@ -253,7 +262,10 @@ impl PingPong {
             return Err(Error::InvalidPingResponse);
         }
         let nonce = u64::from_le_bytes(data[1..].try_into().expect("8 bytes"));
-        Ok(Self { is_response: data[0] == 1, nonce })
+        Ok(Self {
+            is_response: data[0] == 1,
+            nonce,
+        })
     }
 }
 
@@ -335,7 +347,10 @@ impl RekeyInit {
         }
         let mut confirm = [0u8; 32];
         confirm.copy_from_slice(&data[4..]);
-        Ok(Self { epoch, key_confirm: confirm })
+        Ok(Self {
+            epoch,
+            key_confirm: confirm,
+        })
     }
 }
 
@@ -383,7 +398,10 @@ impl ErrorMessage {
 
     pub(crate) fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
         let (code_u16, text) = unmarshal_text_message(data)?;
-        Ok(Self { code: code_u16 as u8, reason: text })
+        Ok(Self {
+            code: code_u16 as u8,
+            reason: text,
+        })
     }
 }
 
@@ -502,7 +520,10 @@ mod tests {
 
     #[test]
     fn test_messages_handshake_init_rejects_wrong_pattern() {
-        let m = HandshakeInit { client_ephemeral: [0u8; 32], noise_payload: vec![] };
+        let m = HandshakeInit {
+            client_ephemeral: [0u8; 32],
+            noise_payload: vec![],
+        };
         let mut wire = m.marshal_binary().expect("marshal");
         wire[0] = 2; // NoisePatternIK
         assert!(matches!(
@@ -513,7 +534,10 @@ mod tests {
 
     #[test]
     fn test_messages_handshake_init_rejects_nonzero_reserved() {
-        let m = HandshakeInit { client_ephemeral: [0u8; 32], noise_payload: vec![] };
+        let m = HandshakeInit {
+            client_ephemeral: [0u8; 32],
+            noise_payload: vec![],
+        };
         let mut wire = m.marshal_binary().expect("marshal");
         wire[1] = 0xFF;
         assert!(matches!(
@@ -556,7 +580,9 @@ mod tests {
 
     #[test]
     fn test_messages_handshake_finish_roundtrip() {
-        let m = HandshakeFinish { noise_payload: vec![0x11u8; 64] };
+        let m = HandshakeFinish {
+            noise_payload: vec![0x11u8; 64],
+        };
         let wire = m.marshal_binary().expect("marshal");
         assert_eq!(wire.len(), 64);
         let m2 = HandshakeFinish::unmarshal_binary(&wire).expect("unmarshal");
@@ -575,7 +601,10 @@ mod tests {
 
     #[test]
     fn test_messages_ping_roundtrip() {
-        let m = PingPong { is_response: false, nonce: 0xDEADBEEF_CAFEBABE };
+        let m = PingPong {
+            is_response: false,
+            nonce: 0xDEADBEEF_CAFEBABE,
+        };
         let wire = m.marshal_binary().expect("marshal");
         assert_eq!(wire.len(), PING_PONG_SIZE);
         assert_eq!(wire[0], 0);
@@ -585,7 +614,10 @@ mod tests {
 
     #[test]
     fn test_messages_pong_roundtrip() {
-        let m = PingPong { is_response: true, nonce: 42 };
+        let m = PingPong {
+            is_response: true,
+            nonce: 42,
+        };
         let wire = m.marshal_binary().expect("marshal");
         assert_eq!(wire[0], 1);
         let m2 = PingPong::unmarshal_binary(&wire).expect("unmarshal");
@@ -594,7 +626,12 @@ mod tests {
 
     #[test]
     fn test_messages_ping_invalid_response_byte() {
-        let mut wire = PingPong { is_response: false, nonce: 0 }.marshal_binary().expect("marshal");
+        let mut wire = PingPong {
+            is_response: false,
+            nonce: 0,
+        }
+        .marshal_binary()
+        .expect("marshal");
         wire[0] = 2;
         assert!(matches!(
             PingPong::unmarshal_binary(&wire),
@@ -614,7 +651,9 @@ mod tests {
 
     #[test]
     fn test_messages_ack_roundtrip() {
-        let m = Ack { sequences: vec![1, 2, 3, 100] };
+        let m = Ack {
+            sequences: vec![1, 2, 3, 100],
+        };
         let wire = m.marshal_binary().expect("marshal");
         assert_eq!(wire[0], 4);
         let m2 = Ack::unmarshal_binary(&wire).expect("unmarshal");
@@ -629,13 +668,17 @@ mod tests {
 
     #[test]
     fn test_messages_ack_too_many_sequences() {
-        let m = Ack { sequences: vec![1u64; 256] };
+        let m = Ack {
+            sequences: vec![1u64; 256],
+        };
         assert!(matches!(m.marshal_binary(), Err(Error::AckCount)));
     }
 
     #[test]
     fn test_messages_ack_length_mismatch() {
-        let m = Ack { sequences: vec![1, 2] };
+        let m = Ack {
+            sequences: vec![1, 2],
+        };
         let mut wire = m.marshal_binary().expect("marshal");
         wire[0] = 3; // claim 3 sequences but only 2 are present
         assert!(matches!(
@@ -648,7 +691,10 @@ mod tests {
 
     #[test]
     fn test_messages_rekey_init_roundtrip() {
-        let m = RekeyInit { epoch: 2, key_confirm: [0x55u8; 32] };
+        let m = RekeyInit {
+            epoch: 2,
+            key_confirm: [0x55u8; 32],
+        };
         let wire = m.marshal_binary().expect("marshal");
         assert_eq!(wire.len(), REKEY_INIT_SIZE);
         let m2 = RekeyInit::unmarshal_binary(&wire).expect("unmarshal");
@@ -657,8 +703,14 @@ mod tests {
 
     #[test]
     fn test_messages_rekey_init_epoch_zero_rejected() {
-        let m = RekeyInit { epoch: 0, key_confirm: [0u8; 32] };
-        assert!(matches!(m.marshal_binary(), Err(Error::InvalidEpoch { .. })));
+        let m = RekeyInit {
+            epoch: 0,
+            key_confirm: [0u8; 32],
+        };
+        assert!(matches!(
+            m.marshal_binary(),
+            Err(Error::InvalidEpoch { .. })
+        ));
     }
 
     #[test]
@@ -673,7 +725,10 @@ mod tests {
 
     #[test]
     fn test_messages_session_close_roundtrip_no_reason() {
-        let m = SessionClose { code: CloseCode::Normal, reason: String::new() };
+        let m = SessionClose {
+            code: CloseCode::Normal,
+            reason: String::new(),
+        };
         let wire = m.marshal_binary().expect("marshal");
         assert_eq!(wire.len(), 2);
         let m2 = SessionClose::unmarshal_binary(&wire).expect("unmarshal");
@@ -682,7 +737,10 @@ mod tests {
 
     #[test]
     fn test_messages_session_close_roundtrip_with_reason() {
-        let m = SessionClose { code: CloseCode::Error, reason: "bye".to_owned() };
+        let m = SessionClose {
+            code: CloseCode::Error,
+            reason: "bye".to_owned(),
+        };
         let wire = m.marshal_binary().expect("marshal");
         let m2 = SessionClose::unmarshal_binary(&wire).expect("unmarshal");
         assert_eq!(m, m2);
@@ -702,7 +760,10 @@ mod tests {
 
     #[test]
     fn test_messages_error_message_roundtrip() {
-        let m = ErrorMessage { code: 7, reason: "oops".to_owned() };
+        let m = ErrorMessage {
+            code: 7,
+            reason: "oops".to_owned(),
+        };
         let wire = m.marshal_binary().expect("marshal");
         let m2 = ErrorMessage::unmarshal_binary(&wire).expect("unmarshal");
         assert_eq!(m, m2);
@@ -710,7 +771,10 @@ mod tests {
 
     #[test]
     fn test_messages_error_message_no_reason() {
-        let m = ErrorMessage { code: 0, reason: String::new() };
+        let m = ErrorMessage {
+            code: 0,
+            reason: String::new(),
+        };
         let wire = m.marshal_binary().expect("marshal");
         assert_eq!(wire.len(), 2);
         let m2 = ErrorMessage::unmarshal_binary(&wire).expect("unmarshal");
@@ -721,7 +785,11 @@ mod tests {
 
     #[test]
     fn test_messages_encrypted_data_roundtrip_empty_fields() {
-        let m = EncryptedData { stream_id: 1, app_message_type: 0x42, fields: vec![] };
+        let m = EncryptedData {
+            stream_id: 1,
+            app_message_type: 0x42,
+            fields: vec![],
+        };
         let wire = m.marshal_binary().expect("marshal");
         assert_eq!(wire.len(), 4);
         assert_eq!(wire[3], 0); // reserved byte
@@ -731,7 +799,11 @@ mod tests {
 
     #[test]
     fn test_messages_encrypted_data_reserved_byte_rejected() {
-        let m = EncryptedData { stream_id: 1, app_message_type: 0x01, fields: vec![] };
+        let m = EncryptedData {
+            stream_id: 1,
+            app_message_type: 0x01,
+            fields: vec![],
+        };
         let mut wire = m.marshal_binary().expect("marshal");
         wire[3] = 0xFF; // reserved byte must be zero
         assert!(matches!(

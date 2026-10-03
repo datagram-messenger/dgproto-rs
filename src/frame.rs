@@ -153,7 +153,12 @@ impl Frame {
             tag.copy_from_slice(&body[payload_len..payload_len + AEAD_TAG_SIZE]);
             let padding = body[payload_len + AEAD_TAG_SIZE..].to_vec();
 
-            let frame = Self { header, payload, tag, padding };
+            let frame = Self {
+                header,
+                payload,
+                tag,
+                padding,
+            };
             frame.validate_receive()?;
             Ok(frame)
         } else {
@@ -218,15 +223,8 @@ mod tests {
     #[test]
     fn test_frame_roundtrip_handshake_init() {
         let payload = vec![0u8; 36]; // HandshakeInit fixed size
-        let f = Frame::new(
-            MessageType::HandshakeInit,
-            [0u8; 16],
-            0,
-            &payload,
-            &[],
-            &[],
-        )
-        .expect("new");
+        let f =
+            Frame::new(MessageType::HandshakeInit, [0u8; 16], 0, &payload, &[], &[]).expect("new");
         let wire = f.marshal_binary().expect("marshal");
         // No AEAD tag in wire for handshake init.
         assert_eq!(wire.len(), HEADER_SIZE + 36);
@@ -254,7 +252,10 @@ mod tests {
         // Payload
         assert_eq!(&wire[HEADER_SIZE..HEADER_SIZE + 7], b"PAYLOAD");
         // Tag
-        assert_eq!(&wire[HEADER_SIZE + 7..HEADER_SIZE + 7 + AEAD_TAG_SIZE], &[0xCCu8; 16]);
+        assert_eq!(
+            &wire[HEADER_SIZE + 7..HEADER_SIZE + 7 + AEAD_TAG_SIZE],
+            &[0xCCu8; 16]
+        );
         // Padding
         assert_eq!(&wire[HEADER_SIZE + 7 + AEAD_TAG_SIZE..], b"PAD");
     }
@@ -262,7 +263,10 @@ mod tests {
     #[test]
     fn test_frame_unmarshal_too_short() {
         let wire = [0u8; 10];
-        assert!(matches!(Frame::unmarshal_binary(&wire), Err(Error::FrameTooShort)));
+        assert!(matches!(
+            Frame::unmarshal_binary(&wire),
+            Err(Error::FrameTooShort)
+        ));
     }
 
     #[test]
@@ -283,7 +287,14 @@ mod tests {
         let tag = [0u8; AEAD_TAG_SIZE];
         let padding = vec![0u8; 256]; // exceeds u8 max
         assert!(matches!(
-            Frame::new(MessageType::EncryptedData, [0u8; 16], 1, b"x", &tag, &padding),
+            Frame::new(
+                MessageType::EncryptedData,
+                [0u8; 16],
+                1,
+                b"x",
+                &tag,
+                &padding
+            ),
             Err(Error::PaddingLength)
         ));
     }
@@ -291,14 +302,28 @@ mod tests {
     #[test]
     fn test_frame_new_tag_wrong_length_for_encrypted() {
         assert!(matches!(
-            Frame::new(MessageType::EncryptedData, [0u8; 16], 1, b"x", &[0u8; 8], &[]),
+            Frame::new(
+                MessageType::EncryptedData,
+                [0u8; 16],
+                1,
+                b"x",
+                &[0u8; 8],
+                &[]
+            ),
             Err(Error::TagLength)
         ));
     }
 
     #[test]
     fn test_frame_new_handshake_accepts_empty_tag() {
-        let f = Frame::new(MessageType::HandshakeInit, [0u8; 16], 0, &[0u8; 36], &[], &[]);
+        let f = Frame::new(
+            MessageType::HandshakeInit,
+            [0u8; 16],
+            0,
+            &[0u8; 36],
+            &[],
+            &[],
+        );
         assert!(f.is_ok());
     }
 
@@ -306,7 +331,14 @@ mod tests {
     fn test_frame_new_handshake_rejects_nonzero_tag() {
         let tag = [0xFFu8; AEAD_TAG_SIZE];
         assert!(matches!(
-            Frame::new(MessageType::HandshakeInit, [0u8; 16], 0, &[0u8; 36], &tag, &[]),
+            Frame::new(
+                MessageType::HandshakeInit,
+                [0u8; 16],
+                0,
+                &[0u8; 36],
+                &tag,
+                &[]
+            ),
             Err(Error::TagLength)
         ));
     }

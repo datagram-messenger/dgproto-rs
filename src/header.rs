@@ -48,17 +48,17 @@ impl Flags {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub(crate) enum MessageType {
-    HandshakeInit     = 0x01,
+    HandshakeInit = 0x01,
     HandshakeResponse = 0x02,
     /// Used for both `HandshakeFinish` (zero session ID) and `EncryptedData`
     /// (non-zero session ID) — distinguished by context.
-    EncryptedData     = 0x03,
-    PingPong          = 0x04,
-    SessionClose      = 0x05,
-    Ack               = 0x06,
+    EncryptedData = 0x03,
+    PingPong = 0x04,
+    SessionClose = 0x05,
+    Ack = 0x06,
     // 0x07 is reserved and always rejected.
-    RekeyInit         = 0x08,
-    Error             = 0x09,
+    RekeyInit = 0x08,
+    Error = 0x09,
 }
 
 impl MessageType {
@@ -143,9 +143,8 @@ impl Header {
     /// Total wire-frame size derived from this header (header + payload + optional
     /// tag + padding). DGProto v1 has no outer length prefix.
     pub(crate) fn frame_size(&self) -> u64 {
-        let mut size = crate::HEADER_SIZE as u64
-            + self.payload_length as u64
-            + self.pad_length as u64;
+        let mut size =
+            crate::HEADER_SIZE as u64 + self.payload_length as u64 + self.pad_length as u64;
         if self.msg_type.has_aead_tag() {
             size += crate::AEAD_TAG_SIZE as u64;
         }
@@ -266,13 +265,7 @@ mod tests {
     use super::*;
 
     fn make_header() -> Header {
-        Header::new(
-            MessageType::EncryptedData,
-            [0x11u8; 16],
-            42,
-            100,
-            0,
-        )
+        Header::new(MessageType::EncryptedData, [0x11u8; 16], 42, 100, 0)
     }
 
     #[test]
@@ -300,9 +293,18 @@ mod tests {
 
     #[test]
     fn test_header_little_endian_sequence() {
-        let h = Header::new(MessageType::EncryptedData, [0u8; 16], 0x0102030405060708, 0, 0);
+        let h = Header::new(
+            MessageType::EncryptedData,
+            [0u8; 16],
+            0x0102030405060708,
+            0,
+            0,
+        );
         let wire = h.marshal_binary().expect("marshal");
-        assert_eq!(&wire[24..32], &[0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01]);
+        assert_eq!(
+            &wire[24..32],
+            &[0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01]
+        );
     }
 
     #[test]
@@ -444,12 +446,18 @@ mod tests {
 
     #[test]
     fn test_message_type_from_u8_reserved_0x07() {
-        assert!(matches!(MessageType::from_u8(0x07), Err(Error::MessageType)));
+        assert!(matches!(
+            MessageType::from_u8(0x07),
+            Err(Error::MessageType)
+        ));
     }
 
     #[test]
     fn test_message_type_from_u8_unknown() {
-        assert!(matches!(MessageType::from_u8(0xFF), Err(Error::MessageType)));
+        assert!(matches!(
+            MessageType::from_u8(0xFF),
+            Err(Error::MessageType)
+        ));
     }
 
     #[test]

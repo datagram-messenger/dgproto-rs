@@ -238,7 +238,10 @@ impl InitiatorHandshake {
         let mut ephemeral = [0u8; 32];
         ephemeral.copy_from_slice(noise_msg);
 
-        let init = HandshakeInit { client_ephemeral: ephemeral, noise_payload: vec![] };
+        let init = HandshakeInit {
+            client_ephemeral: ephemeral,
+            noise_payload: vec![],
+        };
         let wire = match init.marshal_binary() {
             Ok(w) => w,
             Err(_) => {
@@ -313,7 +316,9 @@ impl InitiatorHandshake {
             return Err(self.fail());
         }
 
-        let finish = HandshakeFinish { noise_payload: noise_msg.to_vec() };
+        let finish = HandshakeFinish {
+            noise_payload: noise_msg.to_vec(),
+        };
         let wire = match finish.marshal_binary() {
             Ok(w) => w,
             Err(_) => {
@@ -488,7 +493,9 @@ mod tests {
 
         // Flight 2: responder → initiator
         let mut resp_msg = vec![0u8; 128];
-        let n = resp_inner.write_message(&[], &mut resp_msg).expect("resp write 2");
+        let n = resp_inner
+            .write_message(&[], &mut resp_msg)
+            .expect("resp write 2");
         let resp_noise = &resp_msg[..n]; // 96 bytes
         assert_eq!(resp_noise.len(), 96);
         let mut server_ephemeral = [0u8; 32];
