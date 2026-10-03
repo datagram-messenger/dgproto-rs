@@ -60,7 +60,7 @@ impl StaticKey {
     }
 
     /// Load a static key from 32 raw private key bytes and derive the public key.
-    pub fn load(private_bytes: &[u8]) -> Result<Self, crate::Error> {
+    pub fn load(_private_bytes: &[u8]) -> Result<Self, crate::Error> {
         // TODO: implement using snow's DH25519.generate_keypair(fixed_reader)
         // Reject if len != 32.
         todo!("StaticKey::load")
@@ -91,6 +91,7 @@ impl std::fmt::Debug for StaticKey {
 /// Secrets produced by a completed Noise XX handshake.
 ///
 /// Zeroed on drop.
+#[allow(dead_code)]
 #[derive(ZeroizeOnDrop)]
 pub(crate) struct HandshakeSecrets {
     pub session_id: [u8; 16],

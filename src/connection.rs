@@ -129,8 +129,8 @@ impl Connection {
     /// Dial `addr`, perform the Noise XX handshake, and start the connection
     /// runtime. Returns when the handshake completes successfully.
     pub async fn connect(
-        addr: impl tokio::net::ToSocketAddrs,
-        config: ClientConfig,
+        _addr: impl tokio::net::ToSocketAddrs,
+        _config: ClientConfig,
     ) -> Result<Self, Error> {
         // TODO: implement
         // 1. tokio::net::TcpStream::connect(addr)
@@ -147,7 +147,7 @@ impl Connection {
     ///
     /// Returns immediately. Does not wait for the frame to be written.
     /// Returns `Err(Error::OutboundQueueFull)` if the channel is full.
-    pub fn send(&self, msg: impl Into<ApplicationMessage>) -> Result<(), Error> {
+    pub fn send(&self, _msg: impl Into<ApplicationMessage>) -> Result<(), Error> {
         // TODO: implement
         todo!("Connection::send")
     }
@@ -156,7 +156,7 @@ impl Connection {
     ///
     /// Success means the frame was written locally — not acknowledged by the
     /// peer or processed by the application.
-    pub async fn send_and_wait(&self, msg: impl Into<ApplicationMessage>) -> Result<(), Error> {
+    pub async fn send_and_wait(&self, _msg: impl Into<ApplicationMessage>) -> Result<(), Error> {
         // TODO: implement
         todo!("Connection::send_and_wait")
     }
@@ -164,8 +164,8 @@ impl Connection {
     /// Like [`send`](Self::send), with explicit random padding (0–255 bytes).
     pub fn send_padded(
         &self,
-        msg: impl Into<ApplicationMessage>,
-        pad_len: u8,
+        _msg: impl Into<ApplicationMessage>,
+        _pad_len: u8,
     ) -> Result<(), Error> {
         // TODO: implement
         todo!("Connection::send_padded")

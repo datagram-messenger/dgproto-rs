@@ -29,7 +29,8 @@
 //! After accepting a rekey, the receiver MAY accept previous-epoch frames for:
 //! - at most **2048 current-epoch frames**, AND
 //! - at most **30 seconds**
-//! (whichever expires first). Previous-epoch frames remain subject to their
+//!
+//! Whichever expires first. Previous-epoch frames remain subject to their
 //! own replay window.
 //!
 //! # Invariants
@@ -41,6 +42,8 @@
 //! - Epoch overflow past `u32::MAX` is rejected (`EpochExhausted`).
 //!
 //! See `docs/protocol/dgproto-v1.md` §4.4.1 for the normative specification.
+
+#![allow(dead_code)]
 
 /// Default rekey frame limit per epoch (2^32).
 pub(crate) const REKEY_FRAME_LIMIT: u64 = crate::DEFAULT_REKEY_FRAME_LIMIT;
@@ -73,8 +76,8 @@ impl RekeyState {
     /// `next_epoch` must equal `self.epoch + 1`.
     pub(crate) fn compute_key_confirm(
         &self,
-        secret: &[u8; 32],
-        next_epoch: u32,
+        _secret: &[u8; 32],
+        _next_epoch: u32,
     ) -> Result<[u8; 32], crate::Error> {
         // TODO: implement — mirror Go RekeyState.ComputeKeyConfirm exactly.
         // Label: b"DGPv1 Rekey Confirm" || next_epoch.to_le_bytes()
@@ -84,7 +87,7 @@ impl RekeyState {
     /// Derive the next traffic key from the current secret.
     ///
     /// `K_next = HMAC-SHA256(current_secret, b"DGPv1 Rekey Send Key")`
-    pub(crate) fn derive_next_key(current_secret: &[u8; 32]) -> [u8; 32] {
+    pub(crate) fn derive_next_key(_current_secret: &[u8; 32]) -> [u8; 32] {
         // TODO: implement — mirror Go DeriveNextKeys (send label only).
         todo!("RekeyState::derive_next_key")
     }

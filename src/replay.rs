@@ -24,6 +24,8 @@
 //!
 //! See `docs/protocol/dgproto-v1.md` §4.5 for the normative specification.
 
+#![allow(dead_code)]
+
 /// Number of sequence-number slots tracked by the window.
 pub(crate) const WINDOW_SIZE: usize = crate::REPLAY_WINDOW_SIZE; // 2048
 const WORD_COUNT: usize = WINDOW_SIZE / 64; // 32
@@ -60,7 +62,7 @@ impl ReplayWindow {
     ///
     /// Returns a `ReplayToken` on success. The token must be passed to
     /// [`commit`](Self::commit) after the frame is authenticated.
-    pub(crate) fn check(&self, sequence: u64) -> Result<ReplayToken, crate::Error> {
+    pub(crate) fn check(&self, _sequence: u64) -> Result<ReplayToken, crate::Error> {
         // TODO: implement — mirror Go ReplayWindow.Check exactly.
         todo!("ReplayWindow::check")
     }
@@ -69,7 +71,7 @@ impl ReplayWindow {
     ///
     /// Returns `Err(Error::ReplayStale)` if the token was invalidated by a
     /// concurrent commit.
-    pub(crate) fn commit(&mut self, token: ReplayToken) -> Result<(), crate::Error> {
+    pub(crate) fn commit(&mut self, _token: ReplayToken) -> Result<(), crate::Error> {
         // TODO: implement — mirror Go ReplayWindow.Commit exactly.
         todo!("ReplayWindow::commit")
     }
