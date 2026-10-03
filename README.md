@@ -78,7 +78,7 @@ async fn main() -> Result<(), dgproto::Error> {
 }
 ```
 
-See [Getting started](docs/guides/getting-started.md) for a complete example with inbound message dispatch, error handling, and signal-driven shutdown.
+See the [architecture overview](docs/architecture/overview.md) for connection data flow, concurrency, rekeying, and shutdown behavior.
 
 ---
 
