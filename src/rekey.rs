@@ -43,7 +43,14 @@
 //!
 //! See `docs/protocol/dgproto-v1.md` §4.4.1 for the normative specification.
 
+// This completed layer is wired into Session once that layer is implemented.
 #![allow(dead_code)]
+
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
+
+const CONFIRM_LABEL: &[u8] = b"DGPv1 Rekey Confirm";
+const SEND_KEY_LABEL: &[u8] = b"DGPv1 Rekey Send Key";
 
 /// Default rekey frame limit per epoch (2^32).
 pub(crate) const REKEY_FRAME_LIMIT: u64 = crate::DEFAULT_REKEY_FRAME_LIMIT;
@@ -76,19 +83,106 @@ impl RekeyState {
     /// `next_epoch` must equal `self.epoch + 1`.
     pub(crate) fn compute_key_confirm(
         &self,
-        _secret: &[u8; 32],
-        _next_epoch: u32,
+        secret: &[u8; 32],
+        next_epoch: u32,
     ) -> Result<[u8; 32], crate::Error> {
-        // TODO: implement — mirror Go RekeyState.ComputeKeyConfirm exactly.
-        // Label: b"DGPv1 Rekey Confirm" || next_epoch.to_le_bytes()
-        todo!("RekeyState::compute_key_confirm")
+        let expected_epoch = self
+            .epoch
+            .checked_add(1)
+            .ok_or(crate::Error::EpochExhausted)?;
+        if next_epoch != expected_epoch {
+            return Err(crate::Error::InvalidEpoch {
+                got: next_epoch,
+                want: expected_epoch,
+            });
+        }
+
+        let mut mac =
+            Hmac::<Sha256>::new_from_slice(secret).expect("HMAC-SHA256 accepts keys of any length");
+        mac.update(CONFIRM_LABEL);
+        mac.update(&next_epoch.to_le_bytes());
+        Ok(mac.finalize().into_bytes().into())
     }
 
     /// Derive the next traffic key from the current secret.
     ///
     /// `K_next = HMAC-SHA256(current_secret, b"DGPv1 Rekey Send Key")`
-    pub(crate) fn derive_next_key(_current_secret: &[u8; 32]) -> [u8; 32] {
-        // TODO: implement — mirror Go DeriveNextKeys (send label only).
-        todo!("RekeyState::derive_next_key")
+    pub(crate) fn derive_next_key(current_secret: &[u8; 32]) -> [u8; 32] {
+        let mut mac = Hmac::<Sha256>::new_from_slice(current_secret)
+            .expect("HMAC-SHA256 accepts keys of any length");
+        mac.update(SEND_KEY_LABEL);
+        mac.finalize().into_bytes().into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        RekeyState, REKEY_FRAME_LIMIT, REKEY_GRACE_FRAMES, REKEY_GRACE_PERIOD, REKEY_INTERVAL,
+    };
+    use crate::Error;
+    use hmac::{Hmac, Mac};
+    use sha2::Sha256;
+    use std::time::Duration;
+
+    #[test]
+    fn test_rekey_defaults_match_protocol() {
+        assert_eq!(REKEY_FRAME_LIMIT, 1 << 32);
+        assert_eq!(REKEY_INTERVAL, Duration::from_secs(600));
+        assert_eq!(REKEY_GRACE_FRAMES, 2048);
+        assert_eq!(REKEY_GRACE_PERIOD, Duration::from_secs(30));
+    }
+
+    #[test]
+    fn test_rekey_state_starts_at_epoch_one() {
+        assert_eq!(RekeyState::new().epoch, 1);
+    }
+
+    #[test]
+    fn test_rekey_compute_key_confirm_matches_hmac() {
+        let secret = [0x42; 32];
+        let actual = RekeyState::new()
+            .compute_key_confirm(&secret, 2)
+            .expect("next epoch should be valid");
+
+        let mut expected = Hmac::<Sha256>::new_from_slice(&secret)
+            .expect("HMAC-SHA256 accepts keys of any length");
+        expected.update(b"DGPv1 Rekey Confirm");
+        expected.update(&2u32.to_le_bytes());
+        let expected: [u8; 32] = expected.finalize().into_bytes().into();
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_rekey_rejects_non_successor_epochs() {
+        let state = RekeyState::new();
+        for epoch in [0, 1, 3, u32::MAX] {
+            assert!(matches!(
+                state.compute_key_confirm(&[0; 32], epoch),
+                Err(Error::InvalidEpoch { got, want: 2 }) if got == epoch
+            ));
+        }
+    }
+
+    #[test]
+    fn test_rekey_rejects_epoch_exhaustion() {
+        let state = RekeyState { epoch: u32::MAX };
+        assert!(matches!(
+            state.compute_key_confirm(&[0; 32], 0),
+            Err(Error::EpochExhausted)
+        ));
+    }
+
+    #[test]
+    fn test_rekey_derive_next_key_matches_send_label() {
+        let secret = [0xa5; 32];
+        let actual = RekeyState::derive_next_key(&secret);
+
+        let mut expected = Hmac::<Sha256>::new_from_slice(&secret)
+            .expect("HMAC-SHA256 accepts keys of any length");
+        expected.update(b"DGPv1 Rekey Send Key");
+        let expected: [u8; 32] = expected.finalize().into_bytes().into();
+        assert_eq!(actual, expected);
+        assert_ne!(actual, secret);
     }
 }
