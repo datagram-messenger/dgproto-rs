@@ -21,7 +21,7 @@ path = "src/lib.rs"
 
 # Noise XX handshake (initiator role only).
 # default-features = false avoids pulling in ring; default-resolver uses RustCrypto.
-snow = { version = "0.9", default-features = false, features = ["default-resolver"] }
+snow = { version = "0.9", default-features = false, features = ["default-resolver", "risky-raw-split"] }
 
 # ChaCha20-Poly1305 AEAD for data frames.
 chacha20poly1305 = "0.10"
@@ -51,6 +51,12 @@ thiserror = "1"
 
 # Zeroize key material on drop.
 zeroize = { version = "1", features = ["derive"] }
+
+# Constant-time comparisons for secret material.
+subtle = "2"
+
+# X25519 key derivation (transitive dep via snow, but we need it directly for StaticKey::load).
+curve25519-dalek = { version = "4", default-features = false, features = ["alloc"] }
 
 # ── Dev / test dependencies ───────────────────────────────────────────────────
 
