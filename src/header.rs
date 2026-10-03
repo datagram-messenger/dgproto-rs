@@ -49,7 +49,7 @@ impl Flags {
 /// Message type identifier carried in every DGProto v1 header.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
-pub(crate) enum MessageType {
+pub enum MessageType {
     HandshakeInit = 0x01,
     HandshakeResponse = 0x02,
     /// Used for both `HandshakeFinish` (zero session ID) and `EncryptedData`
@@ -215,7 +215,7 @@ impl Header {
     /// Decode a 40-byte wire buffer into a `Header`.
     ///
     /// Validates magic and version. Preserves reserved bytes verbatim.
-    pub(crate) fn unmarshal_binary(buf: &[u8]) -> Result<Self, Error> {
+    pub fn unmarshal_binary(buf: &[u8]) -> Result<Self, Error> {
         if buf.len() < crate::HEADER_SIZE {
             return Err(Error::HeaderTooShort);
         }

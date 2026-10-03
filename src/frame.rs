@@ -127,7 +127,7 @@ impl Frame {
     ///
     /// The buffer must contain at least `HEADER_SIZE` bytes. The body length
     /// is derived from the header — there is no outer length prefix.
-    pub(crate) fn unmarshal_binary(wire: &[u8]) -> Result<Self, Error> {
+    pub fn unmarshal_binary(wire: &[u8]) -> Result<Self, Error> {
         if wire.len() < HEADER_SIZE {
             return Err(Error::FrameTooShort);
         }

@@ -92,7 +92,7 @@ impl HandshakeInit {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
+    pub fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
         if data.len() < HANDSHAKE_INIT_FIXED_SIZE {
             return Err(Error::MessageTooShort);
         }
@@ -144,7 +144,7 @@ impl HandshakeResponse {
         Ok(buf)
     }
 
-    pub(crate) fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
+    pub fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
         if data.len() != HANDSHAKE_RESPONSE_FIXED_SIZE + 64 {
             return Err(Error::MessageLength);
         }
@@ -176,7 +176,7 @@ impl HandshakeFinish {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
+    pub fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
         if data.len() != HANDSHAKE_FINISH_FIXED_SIZE {
             return Err(Error::MessageLength);
         }
@@ -218,7 +218,7 @@ impl EncryptedData {
         Ok(buf)
     }
 
-    pub(crate) fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
+    pub fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
         if data.len() < 4 {
             return Err(Error::MessageTooShort);
         }
@@ -258,7 +258,7 @@ impl PingPong {
         Ok(buf.to_vec())
     }
 
-    pub(crate) fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
+    pub fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
         if data.len() != PING_PONG_SIZE {
             return Err(Error::MessageLength);
         }
@@ -295,7 +295,7 @@ impl Ack {
         Ok(buf)
     }
 
-    pub(crate) fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
+    pub fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
         if data.is_empty() {
             return Err(Error::MessageTooShort);
         }
@@ -341,7 +341,7 @@ impl RekeyInit {
         Ok(buf.to_vec())
     }
 
-    pub(crate) fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
+    pub fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
         if data.len() != REKEY_INIT_SIZE {
             return Err(Error::MessageLength);
         }
@@ -374,7 +374,7 @@ impl SessionClose {
         marshal_text_message(self.code as u16, &self.reason)
     }
 
-    pub(crate) fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
+    pub fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
         let (code_u16, text) = unmarshal_text_message(data)?;
         if code_u16 > 3 {
             return Err(Error::InvalidCloseCode);
@@ -400,7 +400,7 @@ impl ErrorMessage {
         marshal_text_message(self.code as u16, &self.reason)
     }
 
-    pub(crate) fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
+    pub fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
         let (code_u16, text) = unmarshal_text_message(data)?;
         Ok(Self {
             code: code_u16 as u8,

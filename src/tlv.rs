@@ -35,7 +35,7 @@ pub(crate) const MAX_TLV_ELEMENTS: usize = MAX_TLV_SEQUENCE_SIZE / 4;
 ///
 /// `value` is owned and does not alias caller input.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct Tlv {
+pub struct Tlv {
     pub typ: u8,
     pub value: Vec<u8>,
 }
