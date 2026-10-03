@@ -180,6 +180,30 @@ pub enum Error {
     #[error("dgproto: invalid close code")]
     InvalidCloseCode,
 
+    /// A handshake payload is not 4-byte aligned.
+    ///
+    /// Go equivalent: `ErrHandshakeAlignment`
+    #[error("dgproto: handshake payload must be 4-byte aligned")]
+    HandshakeAlignment,
+
+    /// An unregistered Noise pattern value was encountered.
+    ///
+    /// Go equivalent: `ErrInvalidNoisePattern`
+    #[error("dgproto: invalid Noise pattern")]
+    InvalidNoisePattern,
+
+    /// A Noise XX initial wrapper carries extra payload (must be empty).
+    ///
+    /// Go equivalent: `ErrUnexpectedNoiseData`
+    #[error("dgproto: Noise XX initial payload must be empty")]
+    UnexpectedNoiseData,
+
+    /// A ping response byte is neither 0 nor 1.
+    ///
+    /// Go equivalent: `ErrInvalidPingResponse`
+    #[error("dgproto: invalid ping response flag")]
+    InvalidPingResponse,
+
     // ── L2: Crypto / Codec ────────────────────────────────────────────────────
     /// A traffic key is not exactly 32 bytes.
     ///
