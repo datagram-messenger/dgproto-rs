@@ -50,6 +50,11 @@ jobs:
       - name: cargo test (release)
         run: cargo test --release --all-features
 
+      - name: cargo doc (no-deps)
+        run: cargo doc --all-features --no-deps
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+
   # ── MSRV check ───────────────────────────────────────────────────────────────
   msrv:
     name: MSRV (Rust 1.80)
