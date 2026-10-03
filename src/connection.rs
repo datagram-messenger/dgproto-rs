@@ -103,6 +103,30 @@ pub enum ApplicationMessage {
     SessionClose(SessionClose),
 }
 
+impl From<EncryptedData> for ApplicationMessage {
+    fn from(message: EncryptedData) -> Self {
+        Self::EncryptedData(message)
+    }
+}
+
+impl From<Ack> for ApplicationMessage {
+    fn from(message: Ack) -> Self {
+        Self::Ack(message)
+    }
+}
+
+impl From<ErrorMessage> for ApplicationMessage {
+    fn from(message: ErrorMessage) -> Self {
+        Self::ErrorMessage(message)
+    }
+}
+
+impl From<SessionClose> for ApplicationMessage {
+    fn from(message: SessionClose) -> Self {
+        Self::SessionClose(message)
+    }
+}
+
 /// Handler for inbound application messages.
 ///
 /// Called serially per connection. Returning `Err` closes the connection.
