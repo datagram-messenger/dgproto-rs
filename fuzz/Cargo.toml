@@ -9,7 +9,11 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-dgproto = { path = ".." }
+dgproto = { path = "..", features = [] }
+
+[package.metadata.cargo-fuzz]
+# Pass --cfg fuzzing so lib.rs exposes internal parsers for fuzz targets.
+rustflags = ["--cfg", "fuzzing"]
 
 # Fuzz targets are compiled as separate binaries.
 # Add one [[bin]] entry per target; path must match fuzz_targets/<name>.rs.

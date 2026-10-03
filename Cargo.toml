@@ -84,6 +84,10 @@ lto        = "thin"
 codegen-units = 1
 strip      = "symbols"
 
+[lints.rust]
+# Allow the `fuzzing` cfg flag set by cargo-fuzz (--cfg fuzzing).
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fuzzing)'] }
+
 [profile.dev]
 opt-level = 0
 debug      = true

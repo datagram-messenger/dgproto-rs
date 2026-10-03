@@ -117,3 +117,19 @@ pub const DEFAULT_REKEY_GRACE_FRAMES: u64 = REPLAY_WINDOW_SIZE as u64;
 
 /// Default rekey grace period in seconds.
 pub const DEFAULT_REKEY_GRACE_SECS: u64 = 30;
+
+// ── Fuzzing re-exports ────────────────────────────────────────────────────────
+// Exposed only when building with `cargo fuzz` (RUSTFLAGS="--cfg fuzzing").
+// These are internal parser entry points — not part of the stable public API.
+
+#[cfg(fuzzing)]
+pub use frame::Frame;
+#[cfg(fuzzing)]
+pub use header::Header;
+#[cfg(fuzzing)]
+pub use messages::{
+    Ack as FuzzAck, ErrorMessage as FuzzErrorMessage, HandshakeFinish, HandshakeInit,
+    HandshakeResponse, PingPong, RekeyInit, SessionClose as FuzzSessionClose,
+};
+#[cfg(fuzzing)]
+pub use tlv::decode_tlvs;

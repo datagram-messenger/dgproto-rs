@@ -2,14 +2,8 @@
 
 use libfuzzer_sys::fuzz_target;
 
-// TODO: replace with the real parser once src/frame.rs is implemented.
-//
-// When src/frame.rs is ready, replace the body with:
-//
-//   fuzz_target!(|data: &[u8]| {
-//       let _ = dgproto::frame::Frame::unmarshal_binary(data);
-//   });
-
-fuzz_target!(|_data: &[u8]| {
-    // Stub — no-op until frame.rs is implemented.
+// Invariant: the parser MUST NOT panic on any input, regardless of length
+// or content. It must return Ok or Err — never panic or abort.
+fuzz_target!(|data: &[u8]| {
+    let _ = dgproto::Frame::unmarshal_binary(data);
 });
