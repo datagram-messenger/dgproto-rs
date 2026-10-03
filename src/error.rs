@@ -13,7 +13,6 @@ use thiserror::Error;
 #[non_exhaustive]
 pub enum Error {
     // ── L1: Header ────────────────────────────────────────────────────────────
-
     /// Input is shorter than the 40-byte fixed header.
     ///
     /// Go equivalent: `ErrHeaderTooShort`
@@ -46,7 +45,6 @@ pub enum Error {
     PaddingFlag,
 
     // ── L1: Frame ─────────────────────────────────────────────────────────────
-
     /// Input cannot contain a complete fixed header (< 40 bytes).
     ///
     /// Go equivalent: `ErrFrameTooShort`
@@ -84,7 +82,6 @@ pub enum Error {
     PaddingLength,
 
     // ── L1: TLV ───────────────────────────────────────────────────────────────
-
     /// Input cannot contain a complete TLV header (< 3 bytes).
     ///
     /// Go equivalent: `ErrTLVTooShort`
@@ -122,7 +119,6 @@ pub enum Error {
     TlvElementLimit,
 
     // ── L4: Messages ──────────────────────────────────────────────────────────
-
     /// A message payload is shorter than its required fixed prefix.
     ///
     /// Go equivalent: `ErrMessageTooShort`
@@ -185,7 +181,6 @@ pub enum Error {
     InvalidCloseCode,
 
     // ── L2: Crypto / Codec ────────────────────────────────────────────────────
-
     /// A traffic key is not exactly 32 bytes.
     ///
     /// Go equivalent: `ErrInvalidKeySize`
@@ -211,7 +206,6 @@ pub enum Error {
     InvalidSessionId,
 
     // ── L2: Handshake ─────────────────────────────────────────────────────────
-
     /// A Noise handshake operation failed or was called out of order.
     ///
     /// Go equivalent: `ErrHandshake`
@@ -225,7 +219,6 @@ pub enum Error {
     InvalidStaticKey,
 
     // ── L3: Replay ────────────────────────────────────────────────────────────
-
     /// Sequence number zero was presented to the replay window.
     ///
     /// Go equivalent: `ErrReplayZero`
@@ -251,7 +244,6 @@ pub enum Error {
     ReplayStale,
 
     // ── L3: Session ───────────────────────────────────────────────────────────
-
     /// An operation was attempted on a closed or nil session.
     ///
     /// Go equivalent: `ErrSessionClosed`
@@ -271,7 +263,6 @@ pub enum Error {
     SequenceExhausted,
 
     // ── L3: Rekey ─────────────────────────────────────────────────────────────
-
     /// A rekey epoch is not the immediate successor of the current epoch.
     ///
     /// Go equivalent: `ErrInvalidEpoch`
@@ -291,7 +282,6 @@ pub enum Error {
     KeyConfirmFailed,
 
     // ── L0: Transport / Connection ────────────────────────────────────────────
-
     /// A transport frame is shorter than the 40-byte minimum.
     ///
     /// Go equivalent: `ErrTransportFrameTooShort`
@@ -335,7 +325,6 @@ pub enum Error {
     OutboundQueueFull,
 
     // ── I/O ───────────────────────────────────────────────────────────────────
-
     /// An unclassified I/O error from the underlying TCP socket.
     #[error("dgproto: I/O error: {0}")]
     Io(#[from] std::io::Error),

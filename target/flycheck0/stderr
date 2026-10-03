@@ -1,0 +1,2082 @@
+   0.226622100s  INFO prepare_target{force=false package_id=dgproto v0.1.0 (C:\Users\Nikita\Documents\Projects\dgproto-rs) target="dgproto"}: cargo::core::compiler::fingerprint: fingerprint error for dgproto v0.1.0 (C:\Users\Nikita\Documents\Projects\dgproto-rs)/Check { test: false }/TargetInner { ..: lib_target("dgproto", ["lib"], "C:\\Users\\Nikita\\Documents\\Projects\\dgproto-rs\\src\\lib.rs", Edition2021) }
+   0.226762400s  INFO prepare_target{force=false package_id=dgproto v0.1.0 (C:\Users\Nikita\Documents\Projects\dgproto-rs) target="dgproto"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\dgproto-6694b8d9d6805820\lib-dgproto`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_libgit2_prerelease
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: git_midx_writer_dump
+  17: git_filter_source_repo
+  18: git_midx_writer_dump
+  19: BaseThreadInitThunk
+  20: RtlUserThreadStart
+   0.257862500s  INFO prepare_target{force=false package_id=chacha20poly1305 v0.10.1 target="chacha20poly1305"}: cargo::core::compiler::fingerprint: fingerprint error for chacha20poly1305 v0.10.1/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("chacha20poly1305", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\chacha20poly1305-0.10.1\\src\\lib.rs", Edition2021) }
+   0.257938700s  INFO prepare_target{force=false package_id=chacha20poly1305 v0.10.1 target="chacha20poly1305"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\chacha20poly1305-9e466a546bdafd7f\lib-chacha20poly1305`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_libgit2_prerelease
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: git_midx_writer_dump
+  18: git_filter_source_repo
+  19: git_midx_writer_dump
+  20: BaseThreadInitThunk
+  21: RtlUserThreadStart
+   0.259078600s  INFO prepare_target{force=false package_id=aead v0.5.2 target="aead"}: cargo::core::compiler::fingerprint: fingerprint error for aead v0.5.2/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("aead", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\aead-0.5.2\\src\\lib.rs", Edition2021) }
+   0.259123600s  INFO prepare_target{force=false package_id=aead v0.5.2 target="aead"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\aead-f56939cdfc0c9a21\lib-aead`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.260077600s  INFO prepare_target{force=false package_id=crypto-common v0.1.7 target="crypto_common"}: cargo::core::compiler::fingerprint: fingerprint error for crypto-common v0.1.7/Check { test: false }/TargetInner { ..: lib_target("crypto_common", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\crypto-common-0.1.7\\src\\lib.rs", Edition2018) }
+   0.260147400s  INFO prepare_target{force=false package_id=crypto-common v0.1.7 target="crypto_common"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\crypto-common-4973bd586133ce0b\lib-crypto_common`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.261170300s  INFO prepare_target{force=false package_id=generic-array v0.14.7 target="generic_array"}: cargo::core::compiler::fingerprint: fingerprint error for generic-array v0.14.7/Check { test: false }/TargetInner { ..: lib_target("generic_array", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\generic-array-0.14.7\\src\\lib.rs", Edition2015) }
+   0.261213900s  INFO prepare_target{force=false package_id=generic-array v0.14.7 target="generic_array"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\generic-array-f9c45a0bf698e426\lib-generic_array`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.264126100s  INFO prepare_target{force=false package_id=generic-array v0.14.7 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for generic-array v0.14.7/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\generic-array-0.14.7\\build.rs", Edition2015) }
+   0.264184700s  INFO prepare_target{force=false package_id=generic-array v0.14.7 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\generic-array-3dee49ebb4e33de5\run-build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_filter_source_repo
+  17: git_libgit2_prerelease
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: <unknown>
+  22: git_midx_writer_dump
+  23: git_filter_source_repo
+  24: git_midx_writer_dump
+  25: BaseThreadInitThunk
+  26: RtlUserThreadStart
+   0.264721500s  INFO prepare_target{force=false package_id=generic-array v0.14.7 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for generic-array v0.14.7/Build/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\generic-array-0.14.7\\build.rs", Edition2015) }
+   0.264760300s  INFO prepare_target{force=false package_id=generic-array v0.14.7 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\generic-array-d6e6cdbeffbb1cdb\build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_filter_source_repo
+  17: git_libgit2_prerelease
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: <unknown>
+  22: git_midx_writer_dump
+  23: git_filter_source_repo
+  24: git_midx_writer_dump
+  25: BaseThreadInitThunk
+  26: RtlUserThreadStart
+   0.269254000s  INFO prepare_target{force=false package_id=chacha20 v0.9.1 target="chacha20"}: cargo::core::compiler::fingerprint: fingerprint error for chacha20 v0.9.1/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("chacha20", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\chacha20-0.9.1\\src\\lib.rs", Edition2021) }
+   0.269322900s  INFO prepare_target{force=false package_id=chacha20 v0.9.1 target="chacha20"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\chacha20-149044a06545a69d\lib-chacha20`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.270347100s  INFO prepare_target{force=false package_id=cipher v0.4.4 target="cipher"}: cargo::core::compiler::fingerprint: fingerprint error for cipher v0.4.4/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("cipher", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\cipher-0.4.4\\src\\lib.rs", Edition2021) }
+   0.270391800s  INFO prepare_target{force=false package_id=cipher v0.4.4 target="cipher"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\cipher-044e12b39f2c17a5\lib-cipher`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.271449300s  INFO prepare_target{force=false package_id=inout v0.1.4 target="inout"}: cargo::core::compiler::fingerprint: fingerprint error for inout v0.1.4/Check { test: false }/TargetInner { ..: lib_target("inout", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\inout-0.1.4\\src\\lib.rs", Edition2021) }
+   0.271499600s  INFO prepare_target{force=false package_id=inout v0.1.4 target="inout"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\inout-482d1a13fac20f99\lib-inout`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.272212100s  INFO prepare_target{force=false package_id=zeroize v1.8.1 target="zeroize"}: cargo::core::compiler::fingerprint: fingerprint error for zeroize v1.8.1/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("zeroize", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\zeroize-1.8.1\\src\\lib.rs", Edition2021) }
+   0.272252600s  INFO prepare_target{force=false package_id=zeroize v1.8.1 target="zeroize"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\zeroize-2961d83f7eb40b84\lib-zeroize`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.273007800s  INFO prepare_target{force=false package_id=zeroize_derive v1.4.2 target="zeroize_derive"}: cargo::core::compiler::fingerprint: fingerprint error for zeroize_derive v1.4.2/Build/TargetInner { name_inferred: true, for_host: true, proc_macro: true, ..: lib_target("zeroize_derive", ["proc-macro"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\zeroize_derive-1.4.2\\src\\lib.rs", Edition2021) }
+   0.273047100s  INFO prepare_target{force=false package_id=zeroize_derive v1.4.2 target="zeroize_derive"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\zeroize_derive-f2c49310fe8d61db\lib-zeroize_derive`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_libgit2_prerelease
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: git_midx_writer_dump
+  22: git_filter_source_repo
+  23: git_midx_writer_dump
+  24: BaseThreadInitThunk
+  25: RtlUserThreadStart
+   0.273991900s  INFO prepare_target{force=false package_id=proc-macro2 v1.0.107 target="proc_macro2"}: cargo::core::compiler::fingerprint: fingerprint error for proc-macro2 v1.0.107/Build/TargetInner { ..: lib_target("proc_macro2", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\proc-macro2-1.0.107\\src\\lib.rs", Edition2021) }
+   0.274036200s  INFO prepare_target{force=false package_id=proc-macro2 v1.0.107 target="proc_macro2"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\proc-macro2-346c98990a5e3b68\lib-proc_macro2`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_filter_source_repo
+  17: git_libgit2_prerelease
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: <unknown>
+  22: git_midx_writer_dump
+  23: git_filter_source_repo
+  24: git_midx_writer_dump
+  25: BaseThreadInitThunk
+  26: RtlUserThreadStart
+   0.276309600s  INFO prepare_target{force=false package_id=proc-macro2 v1.0.107 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for proc-macro2 v1.0.107/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\proc-macro2-1.0.107\\build.rs", Edition2021) }
+   0.276347300s  INFO prepare_target{force=false package_id=proc-macro2 v1.0.107 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\proc-macro2-8f7be28400dd55f0\run-build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_filter_source_repo
+  17: git_filter_source_repo
+  18: git_filter_source_repo
+  19: git_libgit2_prerelease
+  20: <unknown>
+  21: <unknown>
+  22: <unknown>
+  23: <unknown>
+  24: git_midx_writer_dump
+  25: git_filter_source_repo
+  26: git_midx_writer_dump
+  27: BaseThreadInitThunk
+  28: RtlUserThreadStart
+   0.276806700s  INFO prepare_target{force=false package_id=proc-macro2 v1.0.107 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for proc-macro2 v1.0.107/Build/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\proc-macro2-1.0.107\\build.rs", Edition2021) }
+   0.276847100s  INFO prepare_target{force=false package_id=proc-macro2 v1.0.107 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\proc-macro2-4df66588f001c127\build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_filter_source_repo
+  17: git_filter_source_repo
+  18: git_filter_source_repo
+  19: git_libgit2_prerelease
+  20: <unknown>
+  21: <unknown>
+  22: <unknown>
+  23: <unknown>
+  24: git_midx_writer_dump
+  25: git_filter_source_repo
+  26: git_midx_writer_dump
+  27: BaseThreadInitThunk
+  28: RtlUserThreadStart
+   0.278584400s  INFO prepare_target{force=false package_id=quote v1.0.47 target="quote"}: cargo::core::compiler::fingerprint: fingerprint error for quote v1.0.47/Build/TargetInner { ..: lib_target("quote", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\quote-1.0.47\\src\\lib.rs", Edition2021) }
+   0.278649000s  INFO prepare_target{force=false package_id=quote v1.0.47 target="quote"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\quote-4cc8c8a57ba2952d\lib-quote`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_filter_source_repo
+  17: git_libgit2_prerelease
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: <unknown>
+  22: git_midx_writer_dump
+  23: git_filter_source_repo
+  24: git_midx_writer_dump
+  25: BaseThreadInitThunk
+  26: RtlUserThreadStart
+   0.281314100s  INFO prepare_target{force=false package_id=quote v1.0.47 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for quote v1.0.47/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\quote-1.0.47\\build.rs", Edition2021) }
+   0.281370300s  INFO prepare_target{force=false package_id=quote v1.0.47 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\quote-498ec364ae73c493\run-build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_filter_source_repo
+  17: git_filter_source_repo
+  18: git_filter_source_repo
+  19: git_libgit2_prerelease
+  20: <unknown>
+  21: <unknown>
+  22: <unknown>
+  23: <unknown>
+  24: git_midx_writer_dump
+  25: git_filter_source_repo
+  26: git_midx_writer_dump
+  27: BaseThreadInitThunk
+  28: RtlUserThreadStart
+   0.281971300s  INFO prepare_target{force=false package_id=quote v1.0.47 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for quote v1.0.47/Build/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\quote-1.0.47\\build.rs", Edition2021) }
+   0.282015800s  INFO prepare_target{force=false package_id=quote v1.0.47 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\quote-91fffa6232de600c\build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_filter_source_repo
+  17: git_filter_source_repo
+  18: git_filter_source_repo
+  19: git_libgit2_prerelease
+  20: <unknown>
+  21: <unknown>
+  22: <unknown>
+  23: <unknown>
+  24: git_midx_writer_dump
+  25: git_filter_source_repo
+  26: git_midx_writer_dump
+  27: BaseThreadInitThunk
+  28: RtlUserThreadStart
+   0.283668000s  INFO prepare_target{force=false package_id=syn v2.0.119 target="syn"}: cargo::core::compiler::fingerprint: fingerprint error for syn v2.0.119/Build/TargetInner { ..: lib_target("syn", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\syn-2.0.119\\src\\lib.rs", Edition2021) }
+   0.283729200s  INFO prepare_target{force=false package_id=syn v2.0.119 target="syn"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\syn-73682fa6e78a1b30\lib-syn`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_filter_source_repo
+  17: git_libgit2_prerelease
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: <unknown>
+  22: git_midx_writer_dump
+  23: git_filter_source_repo
+  24: git_midx_writer_dump
+  25: BaseThreadInitThunk
+  26: RtlUserThreadStart
+   0.285551200s  INFO prepare_target{force=false package_id=poly1305 v0.8.0 target="poly1305"}: cargo::core::compiler::fingerprint: fingerprint error for poly1305 v0.8.0/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("poly1305", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\poly1305-0.8.0\\src\\lib.rs", Edition2021) }
+   0.285663100s  INFO prepare_target{force=false package_id=poly1305 v0.8.0 target="poly1305"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\poly1305-6c88dc46ea28834c\lib-poly1305`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.287241300s  INFO prepare_target{force=false package_id=universal-hash v0.5.1 target="universal_hash"}: cargo::core::compiler::fingerprint: fingerprint error for universal-hash v0.5.1/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("universal_hash", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\universal-hash-0.5.1\\src\\lib.rs", Edition2021) }
+   0.287297400s  INFO prepare_target{force=false package_id=universal-hash v0.5.1 target="universal_hash"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\universal-hash-58b5e6545dd6e1d0\lib-universal_hash`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.288739400s  INFO prepare_target{force=false package_id=hmac v0.12.1 target="hmac"}: cargo::core::compiler::fingerprint: fingerprint error for hmac v0.12.1/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("hmac", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\hmac-0.12.1\\src\\lib.rs", Edition2018) }
+   0.288790300s  INFO prepare_target{force=false package_id=hmac v0.12.1 target="hmac"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\hmac-d25b423766cf0c0f\lib-hmac`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_libgit2_prerelease
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: git_midx_writer_dump
+  18: git_filter_source_repo
+  19: git_midx_writer_dump
+  20: BaseThreadInitThunk
+  21: RtlUserThreadStart
+   0.289666400s  INFO prepare_target{force=false package_id=digest v0.10.7 target="digest"}: cargo::core::compiler::fingerprint: fingerprint error for digest v0.10.7/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("digest", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\digest-0.10.7\\src\\lib.rs", Edition2018) }
+   0.289709200s  INFO prepare_target{force=false package_id=digest v0.10.7 target="digest"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\digest-03565d4fe9e531ef\lib-digest`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.290642000s  INFO prepare_target{force=false package_id=block-buffer v0.10.4 target="block_buffer"}: cargo::core::compiler::fingerprint: fingerprint error for block-buffer v0.10.4/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("block_buffer", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\block-buffer-0.10.4\\src\\lib.rs", Edition2018) }
+   0.290683300s  INFO prepare_target{force=false package_id=block-buffer v0.10.4 target="block_buffer"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\block-buffer-9903bd8b749cf17b\lib-block_buffer`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.291361700s  INFO prepare_target{force=false package_id=sha2 v0.10.9 target="sha2"}: cargo::core::compiler::fingerprint: fingerprint error for sha2 v0.10.9/Check { test: false }/TargetInner { ..: lib_target("sha2", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\sha2-0.10.9\\src\\lib.rs", Edition2018) }
+   0.291393900s  INFO prepare_target{force=false package_id=sha2 v0.10.9 target="sha2"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\sha2-f82c0fc9a72cbe60\lib-sha2`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_libgit2_prerelease
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: git_midx_writer_dump
+  18: git_filter_source_repo
+  19: git_midx_writer_dump
+  20: BaseThreadInitThunk
+  21: RtlUserThreadStart
+   0.291980300s  INFO prepare_target{force=false package_id=snow v0.9.6 target="snow"}: cargo::core::compiler::fingerprint: fingerprint error for snow v0.9.6/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("snow", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\snow-0.9.6\\src\\lib.rs", Edition2018) }
+   0.292019000s  INFO prepare_target{force=false package_id=snow v0.9.6 target="snow"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\snow-a4fae04a19bcb239\lib-snow`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_libgit2_prerelease
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: git_midx_writer_dump
+  18: git_filter_source_repo
+  19: git_midx_writer_dump
+  20: BaseThreadInitThunk
+  21: RtlUserThreadStart
+   0.293056800s  INFO prepare_target{force=false package_id=aes-gcm v0.10.3 target="aes_gcm"}: cargo::core::compiler::fingerprint: fingerprint error for aes-gcm v0.10.3/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("aes_gcm", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\aes-gcm-0.10.3\\src\\lib.rs", Edition2021) }
+   0.293099900s  INFO prepare_target{force=false package_id=aes-gcm v0.10.3 target="aes_gcm"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\aes-gcm-2edc665b90db9bc8\lib-aes_gcm`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.294110900s  INFO prepare_target{force=false package_id=aes v0.8.4 target="aes"}: cargo::core::compiler::fingerprint: fingerprint error for aes v0.8.4/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("aes", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\aes-0.8.4\\src\\lib.rs", Edition2021) }
+   0.294167900s  INFO prepare_target{force=false package_id=aes v0.8.4 target="aes"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\aes-a8974b07742c5585\lib-aes`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.295097000s  INFO prepare_target{force=false package_id=ctr v0.9.2 target="ctr"}: cargo::core::compiler::fingerprint: fingerprint error for ctr v0.9.2/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("ctr", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\ctr-0.9.2\\src\\lib.rs", Edition2021) }
+   0.295146900s  INFO prepare_target{force=false package_id=ctr v0.9.2 target="ctr"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\ctr-db8e4657ba368483\lib-ctr`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.296145400s  INFO prepare_target{force=false package_id=ghash v0.5.1 target="ghash"}: cargo::core::compiler::fingerprint: fingerprint error for ghash v0.5.1/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("ghash", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\ghash-0.5.1\\src\\lib.rs", Edition2021) }
+   0.296190500s  INFO prepare_target{force=false package_id=ghash v0.5.1 target="ghash"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\ghash-21f3c890fec26df0\lib-ghash`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.297061300s  INFO prepare_target{force=false package_id=polyval v0.6.2 target="polyval"}: cargo::core::compiler::fingerprint: fingerprint error for polyval v0.6.2/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("polyval", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\polyval-0.6.2\\src\\lib.rs", Edition2021) }
+   0.297102800s  INFO prepare_target{force=false package_id=polyval v0.6.2 target="polyval"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\polyval-a7c04878ad9dc36d\lib-polyval`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.298026100s  INFO prepare_target{force=false package_id=blake2 v0.10.6 target="blake2"}: cargo::core::compiler::fingerprint: fingerprint error for blake2 v0.10.6/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("blake2", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\blake2-0.10.6\\src\\lib.rs", Edition2018) }
+   0.298064700s  INFO prepare_target{force=false package_id=blake2 v0.10.6 target="blake2"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\blake2-dee736fed26cd2cd\lib-blake2`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.298754200s  INFO prepare_target{force=false package_id=curve25519-dalek v4.1.3 target="curve25519_dalek"}: cargo::core::compiler::fingerprint: fingerprint error for curve25519-dalek v4.1.3/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("curve25519_dalek", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\curve25519-dalek-4.1.3\\src\\lib.rs", Edition2021) }
+   0.298788700s  INFO prepare_target{force=false package_id=curve25519-dalek v4.1.3 target="curve25519_dalek"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\curve25519-dalek-fdce37b6a4ac1c4e\lib-curve25519_dalek`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.301904600s  INFO prepare_target{force=false package_id=curve25519-dalek v4.1.3 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for curve25519-dalek v4.1.3/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\curve25519-dalek-4.1.3\\build.rs", Edition2021) }
+   0.301960100s  INFO prepare_target{force=false package_id=curve25519-dalek v4.1.3 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\curve25519-dalek-f0e1f60f079cc36d\run-build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.302342400s  INFO prepare_target{force=false package_id=curve25519-dalek v4.1.3 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for curve25519-dalek v4.1.3/Build/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\curve25519-dalek-4.1.3\\build.rs", Edition2021) }
+   0.302373000s  INFO prepare_target{force=false package_id=curve25519-dalek v4.1.3 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\curve25519-dalek-5a82bab8246a3841\build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.303999100s  INFO prepare_target{force=false package_id=curve25519-dalek-derive v0.1.1 target="curve25519_dalek_derive"}: cargo::core::compiler::fingerprint: fingerprint error for curve25519-dalek-derive v0.1.1/Build/TargetInner { name_inferred: true, for_host: true, proc_macro: true, ..: lib_target("curve25519_dalek_derive", ["proc-macro"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\curve25519-dalek-derive-0.1.1\\src\\lib.rs", Edition2021) }
+   0.304038800s  INFO prepare_target{force=false package_id=curve25519-dalek-derive v0.1.1 target="curve25519_dalek_derive"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\curve25519-dalek-derive-5c6877057ced2331\lib-curve25519_dalek_derive`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.306494400s  INFO prepare_target{force=false package_id=snow v0.9.6 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for snow v0.9.6/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\snow-0.9.6\\build.rs", Edition2018) }
+   0.306552400s  INFO prepare_target{force=false package_id=snow v0.9.6 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\snow-5295ffded5b74e82\run-build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.307061100s  INFO prepare_target{force=false package_id=snow v0.9.6 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for snow v0.9.6/Build/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\snow-0.9.6\\build.rs", Edition2018) }
+   0.307101700s  INFO prepare_target{force=false package_id=snow v0.9.6 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\snow-c48e3868f5b33e0c\build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.308344200s  INFO prepare_target{force=false package_id=thiserror v1.0.69 target="thiserror"}: cargo::core::compiler::fingerprint: fingerprint error for thiserror v1.0.69/Check { test: false }/TargetInner { ..: lib_target("thiserror", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\thiserror-1.0.69\\src\\lib.rs", Edition2021) }
+   0.308395200s  INFO prepare_target{force=false package_id=thiserror v1.0.69 target="thiserror"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\thiserror-4a18eb220a7ceb6f\lib-thiserror`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_libgit2_prerelease
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: git_midx_writer_dump
+  18: git_filter_source_repo
+  19: git_midx_writer_dump
+  20: BaseThreadInitThunk
+  21: RtlUserThreadStart
+   0.311097200s  INFO prepare_target{force=false package_id=thiserror v1.0.69 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for thiserror v1.0.69/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\thiserror-1.0.69\\build.rs", Edition2021) }
+   0.311149600s  INFO prepare_target{force=false package_id=thiserror v1.0.69 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\thiserror-a8fb68c070606997\run-build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.311700900s  INFO prepare_target{force=false package_id=thiserror v1.0.69 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for thiserror v1.0.69/Build/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\thiserror-1.0.69\\build.rs", Edition2021) }
+   0.311743400s  INFO prepare_target{force=false package_id=thiserror v1.0.69 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\thiserror-653fc2107534114b\build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.313052100s  INFO prepare_target{force=false package_id=thiserror-impl v1.0.69 target="thiserror_impl"}: cargo::core::compiler::fingerprint: fingerprint error for thiserror-impl v1.0.69/Build/TargetInner { for_host: true, proc_macro: true, ..: lib_target("thiserror_impl", ["proc-macro"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\thiserror-impl-1.0.69\\src\\lib.rs", Edition2021) }
+   0.313104800s  INFO prepare_target{force=false package_id=thiserror-impl v1.0.69 target="thiserror_impl"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\thiserror-impl-ce1457ef2b4d0fa5\lib-thiserror_impl`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.313992700s  INFO prepare_target{force=false package_id=tokio v1.53.1 target="tokio"}: cargo::core::compiler::fingerprint: fingerprint error for tokio v1.53.1/Check { test: false }/TargetInner { ..: lib_target("tokio", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\tokio-1.53.1\\src\\lib.rs", Edition2021) }
+   0.314038100s  INFO prepare_target{force=false package_id=tokio v1.53.1 target="tokio"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\tokio-2d33260362a170bb\lib-tokio`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_libgit2_prerelease
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: git_midx_writer_dump
+  18: git_filter_source_repo
+  19: git_midx_writer_dump
+  20: BaseThreadInitThunk
+  21: RtlUserThreadStart
+   0.317094300s  INFO prepare_target{force=false package_id=parking_lot v0.12.5 target="parking_lot"}: cargo::core::compiler::fingerprint: fingerprint error for parking_lot v0.12.5/Check { test: false }/TargetInner { ..: lib_target("parking_lot", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\parking_lot-0.12.5\\src\\lib.rs", Edition2021) }
+   0.317147000s  INFO prepare_target{force=false package_id=parking_lot v0.12.5 target="parking_lot"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\parking_lot-a4366d2ee7919a79\lib-parking_lot`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.318768600s  INFO prepare_target{force=false package_id=parking_lot_core v0.9.12 target="parking_lot_core"}: cargo::core::compiler::fingerprint: fingerprint error for parking_lot_core v0.9.12/Check { test: false }/TargetInner { ..: lib_target("parking_lot_core", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\parking_lot_core-0.9.12\\src\\lib.rs", Edition2021) }
+   0.318819000s  INFO prepare_target{force=false package_id=parking_lot_core v0.9.12 target="parking_lot_core"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\parking_lot_core-6b91b89f4f68b47f\lib-parking_lot_core`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.321184400s  INFO prepare_target{force=false package_id=parking_lot_core v0.9.12 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for parking_lot_core v0.9.12/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\parking_lot_core-0.9.12\\build.rs", Edition2021) }
+   0.321237700s  INFO prepare_target{force=false package_id=parking_lot_core v0.9.12 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\parking_lot_core-710188759fa2fc30\run-build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_libgit2_prerelease
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: git_midx_writer_dump
+  22: git_filter_source_repo
+  23: git_midx_writer_dump
+  24: BaseThreadInitThunk
+  25: RtlUserThreadStart
+   0.321694300s  INFO prepare_target{force=false package_id=parking_lot_core v0.9.12 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for parking_lot_core v0.9.12/Build/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\parking_lot_core-0.9.12\\build.rs", Edition2021) }
+   0.321735300s  INFO prepare_target{force=false package_id=parking_lot_core v0.9.12 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\parking_lot_core-a910ad1d695a9740\build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_libgit2_prerelease
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: git_midx_writer_dump
+  22: git_filter_source_repo
+  23: git_midx_writer_dump
+  24: BaseThreadInitThunk
+  25: RtlUserThreadStart
+   0.324442900s  INFO prepare_target{force=false package_id=tokio-macros v2.7.2 target="tokio_macros"}: cargo::core::compiler::fingerprint: fingerprint error for tokio-macros v2.7.2/Build/TargetInner { for_host: true, proc_macro: true, ..: lib_target("tokio_macros", ["proc-macro"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\tokio-macros-2.7.2\\src\\lib.rs", Edition2021) }
+   0.324496000s  INFO prepare_target{force=false package_id=tokio-macros v2.7.2 target="tokio_macros"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\tokio-macros-d9f2f1b1b6b94519\lib-tokio_macros`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.325234000s  INFO prepare_target{force=false package_id=syn v3.0.6 target="syn"}: cargo::core::compiler::fingerprint: fingerprint error for syn v3.0.6/Build/TargetInner { ..: lib_target("syn", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\syn-3.0.6\\src\\lib.rs", Edition2021) }
+   0.325282200s  INFO prepare_target{force=false package_id=syn v3.0.6 target="syn"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\syn-561b623bc75dba93\lib-syn`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.325951400s  INFO prepare_target{force=false package_id=tokio-util v0.7.19 target="tokio_util"}: cargo::core::compiler::fingerprint: fingerprint error for tokio-util v0.7.19/Check { test: false }/TargetInner { ..: lib_target("tokio_util", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\tokio-util-0.7.19\\src\\lib.rs", Edition2021) }
+   0.325996300s  INFO prepare_target{force=false package_id=tokio-util v0.7.19 target="tokio_util"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\tokio-util-ff1c33fdaf10befb\lib-tokio_util`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_libgit2_prerelease
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: git_midx_writer_dump
+  18: git_filter_source_repo
+  19: git_midx_writer_dump
+  20: BaseThreadInitThunk
+  21: RtlUserThreadStart
+   0.327847400s  INFO prepare_target{force=false package_id=futures-util v0.3.34 target="futures_util"}: cargo::core::compiler::fingerprint: fingerprint error for futures-util v0.3.34/Check { test: false }/TargetInner { ..: lib_target("futures_util", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\futures-util-0.3.34\\src\\lib.rs", Edition2018) }
+   0.327910400s  INFO prepare_target{force=false package_id=futures-util v0.3.34 target="futures_util"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\futures-util-ecb7b691205dbc9c\lib-futures_util`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.328777500s  INFO prepare_target{force=false package_id=futures-macro v0.3.34 target="futures_macro"}: cargo::core::compiler::fingerprint: fingerprint error for futures-macro v0.3.34/Build/TargetInner { for_host: true, proc_macro: true, ..: lib_target("futures_macro", ["proc-macro"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\futures-macro-0.3.34\\src\\lib.rs", Edition2018) }
+   0.328815100s  INFO prepare_target{force=false package_id=futures-macro v0.3.34 target="futures_macro"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\futures-macro-6b2648f792b3f24f\lib-futures_macro`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.332629300s  INFO prepare_target{force=false package_id=dgproto v0.1.0 (C:\Users\Nikita\Documents\Projects\dgproto-rs) target="dgproto"}: cargo::core::compiler::fingerprint: fingerprint error for dgproto v0.1.0 (C:\Users\Nikita\Documents\Projects\dgproto-rs)/Check { test: true }/TargetInner { ..: lib_target("dgproto", ["lib"], "C:\\Users\\Nikita\\Documents\\Projects\\dgproto-rs\\src\\lib.rs", Edition2021) }
+   0.332732500s  INFO prepare_target{force=false package_id=dgproto v0.1.0 (C:\Users\Nikita\Documents\Projects\dgproto-rs) target="dgproto"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\dgproto-a7a31bd155e4f1d4\test-lib-dgproto`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_libgit2_prerelease
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: git_midx_writer_dump
+  17: git_filter_source_repo
+  18: git_midx_writer_dump
+  19: BaseThreadInitThunk
+  20: RtlUserThreadStart
+   0.335042900s  INFO prepare_target{force=false package_id=serde v1.0.229 target="serde"}: cargo::core::compiler::fingerprint: fingerprint error for serde v1.0.229/Check { test: false }/TargetInner { ..: lib_target("serde", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\serde-1.0.229\\src\\lib.rs", Edition2021) }
+   0.335111300s  INFO prepare_target{force=false package_id=serde v1.0.229 target="serde"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\serde-e08a9d4485037d4e\lib-serde`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_libgit2_prerelease
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: git_midx_writer_dump
+  18: git_filter_source_repo
+  19: git_midx_writer_dump
+  20: BaseThreadInitThunk
+  21: RtlUserThreadStart
+   0.338153100s  INFO prepare_target{force=false package_id=serde v1.0.229 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for serde v1.0.229/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\serde-1.0.229\\build.rs", Edition2021) }
+   0.338227600s  INFO prepare_target{force=false package_id=serde v1.0.229 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\serde-774097fa1c790350\run-build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.338828600s  INFO prepare_target{force=false package_id=serde v1.0.229 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for serde v1.0.229/Build/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\serde-1.0.229\\build.rs", Edition2021) }
+   0.338874800s  INFO prepare_target{force=false package_id=serde v1.0.229 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\serde-da9697703d592838\build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.340807400s  INFO prepare_target{force=false package_id=serde_core v1.0.229 target="serde_core"}: cargo::core::compiler::fingerprint: fingerprint error for serde_core v1.0.229/Check { test: false }/TargetInner { ..: lib_target("serde_core", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\serde_core-1.0.229\\src\\lib.rs", Edition2021) }
+   0.340873700s  INFO prepare_target{force=false package_id=serde_core v1.0.229 target="serde_core"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\serde_core-95528c905f2dd8f9\lib-serde_core`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.343351900s  INFO prepare_target{force=false package_id=serde_core v1.0.229 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for serde_core v1.0.229/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\serde_core-1.0.229\\build.rs", Edition2021) }
+   0.343402600s  INFO prepare_target{force=false package_id=serde_core v1.0.229 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\serde_core-d5c4dc51bbbb4d97\run-build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.343903300s  INFO prepare_target{force=false package_id=serde_core v1.0.229 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for serde_core v1.0.229/Build/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\serde_core-1.0.229\\build.rs", Edition2021) }
+   0.343946000s  INFO prepare_target{force=false package_id=serde_core v1.0.229 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\serde_core-a9c94a87763300d1\build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.345351800s  INFO prepare_target{force=false package_id=serde_derive v1.0.229 target="serde_derive"}: cargo::core::compiler::fingerprint: fingerprint error for serde_derive v1.0.229/Build/TargetInner { for_host: true, proc_macro: true, ..: lib_target("serde_derive", ["proc-macro"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\serde_derive-1.0.229\\src\\lib.rs", Edition2021) }
+   0.345407600s  INFO prepare_target{force=false package_id=serde_derive v1.0.229 target="serde_derive"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\serde_derive-5a00da98ecae0df1\lib-serde_derive`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.346309500s  INFO prepare_target{force=false package_id=serde_json v1.0.151 target="serde_json"}: cargo::core::compiler::fingerprint: fingerprint error for serde_json v1.0.151/Check { test: false }/TargetInner { ..: lib_target("serde_json", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\serde_json-1.0.151\\src\\lib.rs", Edition2021) }
+   0.346362800s  INFO prepare_target{force=false package_id=serde_json v1.0.151 target="serde_json"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\serde_json-0f7c10da53008861\lib-serde_json`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_libgit2_prerelease
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: git_midx_writer_dump
+  18: git_filter_source_repo
+  19: git_midx_writer_dump
+  20: BaseThreadInitThunk
+  21: RtlUserThreadStart
+   0.349948500s  INFO prepare_target{force=false package_id=serde_json v1.0.151 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for serde_json v1.0.151/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\serde_json-1.0.151\\build.rs", Edition2021) }
+   0.350009700s  INFO prepare_target{force=false package_id=serde_json v1.0.151 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\serde_json-e60178976d04704c\run-build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.350541700s  INFO prepare_target{force=false package_id=serde_json v1.0.151 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for serde_json v1.0.151/Build/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\serde_json-1.0.151\\build.rs", Edition2021) }
+   0.350585200s  INFO prepare_target{force=false package_id=serde_json v1.0.151 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\serde_json-a6946029485c9895\build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.352027400s  INFO prepare_target{force=false package_id=zmij v1.0.23 target="zmij"}: cargo::core::compiler::fingerprint: fingerprint error for zmij v1.0.23/Check { test: false }/TargetInner { ..: lib_target("zmij", ["lib"], "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\zmij-1.0.23\\src\\lib.rs", Edition2021) }
+   0.352078900s  INFO prepare_target{force=false package_id=zmij v1.0.23 target="zmij"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\zmij-44035418bc510b7b\lib-zmij`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.354943700s  INFO prepare_target{force=false package_id=zmij v1.0.23 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for zmij v1.0.23/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\zmij-1.0.23\\build.rs", Edition2021) }
+   0.354997900s  INFO prepare_target{force=false package_id=zmij v1.0.23 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\zmij-39f1a6559599e10e\run-build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.355483100s  INFO prepare_target{force=false package_id=zmij v1.0.23 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for zmij v1.0.23/Build/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\Nikita\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\zmij-1.0.23\\build.rs", Edition2021) }
+   0.355514700s  INFO prepare_target{force=false package_id=zmij v1.0.23 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Nikita\Documents\Projects\dgproto-rs\target\debug\.fingerprint\zmij-9a1e767e9238dcdb\build-script-build-script-build`
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling parking_lot_core v0.9.12
+   Compiling serde_core v1.0.229
+   Compiling generic-array v0.14.7
+   Compiling zmij v1.0.23
+   Compiling thiserror v1.0.69
+   Compiling serde v1.0.229
+   Compiling curve25519-dalek v4.1.3
+   Compiling snow v0.9.6
+   Compiling serde_json v1.0.151
+error: could not compile `generic-array` (build script) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `curve25519-dalek` (build script) due to 1 previous error
+error: could not compile `parking_lot_core` (build script) due to 1 previous error
+error: could not compile `serde_json` (build script) due to 1 previous error
+error: could not compile `snow` (build script) due to 1 previous error
+error: could not compile `quote` (build script) due to 1 previous error
+error: could not compile `thiserror` (build script) due to 1 previous error
+error: could not compile `serde_core` (build script) due to 1 previous error
+error: could not compile `zmij` (build script) due to 1 previous error
+error: could not compile `proc-macro2` (build script) due to 1 previous error
+error: could not compile `serde` (build script) due to 1 previous error

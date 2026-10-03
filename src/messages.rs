@@ -75,7 +75,7 @@ pub enum CloseCode {
 
 impl TryFrom<u8> for CloseCode {
     type Error = Error;
-    fn try_from(v: u8) -> Result<Self, Self::Error> {
+    fn try_from(v: u8) -> Result<Self, <Self as TryFrom<u8>>::Error> {
         match v {
             0 => Ok(CloseCode::Normal),
             1 => Ok(CloseCode::Error),

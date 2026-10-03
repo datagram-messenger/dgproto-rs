@@ -46,10 +46,10 @@ use zeroize::ZeroizeOnDrop;
 /// An X25519 Noise static identity key pair.
 ///
 /// The private key is zeroed on drop.
-#[derive(ZeroizeOnDrop)]
+#[derive(ZeroizeOnDrop, Clone)]
 pub struct StaticKey {
     private: [u8; 32],
-    public:  [u8; 32],
+    public: [u8; 32],
 }
 
 impl StaticKey {
@@ -74,8 +74,16 @@ impl StaticKey {
 
 impl std::fmt::Debug for StaticKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Format public key as hex without the `hex` crate dependency in lib.
+        let mut hex_buf = [0u8; 64];
+        const HEX: &[u8] = b"0123456789abcdef";
+        for (i, &b) in self.public.iter().enumerate() {
+            hex_buf[i * 2] = HEX[(b >> 4) as usize];
+            hex_buf[i * 2 + 1] = HEX[(b & 0xf) as usize];
+        }
+        let hex_str = std::str::from_utf8(&hex_buf).unwrap_or("?");
         f.debug_struct("StaticKey")
-            .field("public", &hex::encode(self.public))
+            .field("public", &hex_str)
             .finish_non_exhaustive()
     }
 }
@@ -85,8 +93,8 @@ impl std::fmt::Debug for StaticKey {
 /// Zeroed on drop.
 #[derive(ZeroizeOnDrop)]
 pub(crate) struct HandshakeSecrets {
-    pub session_id:  [u8; 16],
-    pub send_key:    [u8; 32],
+    pub session_id: [u8; 16],
+    pub send_key: [u8; 32],
     pub receive_key: [u8; 32],
 }
 

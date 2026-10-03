@@ -81,15 +81,15 @@ pub struct ClientConfig {
 impl Default for ClientConfig {
     fn default() -> Self {
         Self {
-            static_key:          StaticKey::generate().expect("StaticKey::generate"),
-            server_static_hint:  None,
-            handshake_timeout:   Duration::from_secs(10),
-            write_timeout:       Duration::from_secs(10),
-            idle_timeout:        Duration::ZERO,
-            keepalive_interval:  Duration::ZERO,
-            keepalive_timeout:   Duration::ZERO,
-            outbound_queue:      64,
-            handler_queue:       64,
+            static_key: StaticKey::generate().expect("StaticKey::generate"),
+            server_static_hint: None,
+            handshake_timeout: Duration::from_secs(10),
+            write_timeout: Duration::from_secs(10),
+            idle_timeout: Duration::ZERO,
+            keepalive_interval: Duration::ZERO,
+            keepalive_timeout: Duration::ZERO,
+            outbound_queue: 64,
+            handler_queue: 64,
         }
     }
 }
@@ -107,10 +107,13 @@ pub enum ApplicationMessage {
 ///
 /// Called serially per connection. Returning `Err` closes the connection.
 pub type MessageHandler = Arc<
-    dyn Fn(Arc<Connection>, ApplicationMessage) -> std::pin::Pin<
-        Box<dyn std::future::Future<Output = Result<(), Error>> + Send>,
-    > + Send
-    + Sync,
+    dyn Fn(
+            Arc<Connection>,
+            ApplicationMessage,
+        )
+            -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), Error>> + Send>>
+        + Send
+        + Sync,
 >;
 
 /// A DGProto v1 client connection.
