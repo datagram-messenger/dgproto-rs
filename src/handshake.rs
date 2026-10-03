@@ -474,7 +474,6 @@ mod tests {
         let mut resp_inner = snow::Builder::new(NOISE_PARAMS.parse().expect("params"))
             .prologue(PROLOGUE)
             .local_private_key(resp_key.private())
-            .expect("local key")
             .build_responder()
             .expect("responder");
 

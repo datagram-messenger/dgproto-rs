@@ -46,6 +46,7 @@ use crate::{
 // ── EncryptResult ─────────────────────────────────────────────────────────────
 
 /// Result of `Session::encrypt_frame`.
+#[derive(Debug)]
 pub(crate) enum EncryptResult {
     /// Normal encrypted frame ready to transmit.
     Frame(Frame),
@@ -474,6 +475,7 @@ mod tests {
             session_id: [1u8; 16],
             send_key,
             receive_key: recv_key,
+            peer_static: [0u8; 32],
         }
     }
 
@@ -496,6 +498,7 @@ mod tests {
             session_id: [1u8; 16],
             send_key: recv_key,
             receive_key: send_key,
+            peer_static: [0u8; 32],
         })
         .expect("receiver session");
 
@@ -560,6 +563,7 @@ mod tests {
             session_id: [1u8; 16],
             send_key: [0xAAu8; 32],
             receive_key: [0xBBu8; 32],
+            peer_static: [0u8; 32],
         })
         .expect("session");
 
