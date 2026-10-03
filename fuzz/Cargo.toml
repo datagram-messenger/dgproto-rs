@@ -1,0 +1,39 @@
+[package]
+name    = "dgproto-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+dgproto = { path = ".." }
+
+# Fuzz targets are compiled as separate binaries.
+# Add one [[bin]] entry per target; path must match fuzz_targets/<name>.rs.
+
+[[bin]]
+name = "fuzz_header"
+path = "fuzz_targets/fuzz_header.rs"
+test = false
+doc  = false
+
+[[bin]]
+name = "fuzz_frame"
+path = "fuzz_targets/fuzz_frame.rs"
+test = false
+doc  = false
+
+[[bin]]
+name = "fuzz_tlv"
+path = "fuzz_targets/fuzz_tlv.rs"
+test = false
+doc  = false
+
+[[bin]]
+name = "fuzz_messages"
+path = "fuzz_targets/fuzz_messages.rs"
+test = false
+doc  = false

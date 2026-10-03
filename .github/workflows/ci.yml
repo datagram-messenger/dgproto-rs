@@ -77,8 +77,6 @@ jobs:
   fuzz:
     name: Fuzz smoke
     runs-on: ubuntu-latest
-    # Only run on push to main or when fuzz targets change.
-    if: github.event_name == 'push' || contains(github.event.pull_request.changed_files, 'fuzz/')
 
     steps:
       - uses: actions/checkout@v4
@@ -98,18 +96,16 @@ jobs:
             target
           key: fuzz-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      # cargo-fuzz must be invoked from the workspace root (not fuzz/).
+      # It locates the fuzz sub-crate automatically via the manifest path.
       - name: Fuzz fuzz_header (30s)
         run: cargo +nightly fuzz run fuzz_header -- -max_total_time=30
-        working-directory: fuzz
 
       - name: Fuzz fuzz_frame (30s)
         run: cargo +nightly fuzz run fuzz_frame -- -max_total_time=30
-        working-directory: fuzz
 
       - name: Fuzz fuzz_tlv (30s)
         run: cargo +nightly fuzz run fuzz_tlv -- -max_total_time=30
-        working-directory: fuzz
 
       - name: Fuzz fuzz_messages (30s)
         run: cargo +nightly fuzz run fuzz_messages -- -max_total_time=30
-        working-directory: fuzz
