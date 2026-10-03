@@ -24,7 +24,7 @@
 use crate::Error;
 
 /// DGProto v1 magic bytes: `b"DGP1"`.
-pub(crate) const MAGIC: [u8; 4] = [b'D', b'G', b'P', b'1'];
+pub(crate) const MAGIC: [u8; 4] = *b"DGP1";
 
 /// Protocol version encoded in every DGProto v1 header.
 pub(crate) const VERSION: u8 = 1;

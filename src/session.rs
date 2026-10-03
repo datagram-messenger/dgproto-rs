@@ -399,7 +399,7 @@ fn decrypt_epoch_locked(r: &mut RecvState, frame: &Frame) -> Result<DecryptCandi
     // Try previous epoch if grace window is active.
     let grace_active = r.previous_codec.is_some()
         && r.grace_remaining > 0
-        && r.grace_until.map_or(false, |d| Instant::now() < d);
+        && r.grace_until.is_some_and(|d| Instant::now() < d);
 
     if grace_active {
         let prev_check = r.previous_replay.check(seq);

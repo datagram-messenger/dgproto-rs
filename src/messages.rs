@@ -300,7 +300,7 @@ impl Ack {
             return Err(Error::MessageTooShort);
         }
         let count = data[0] as usize;
-        if count < 1 || count > MAX_ACK_SEQUENCES {
+        if !(1..=MAX_ACK_SEQUENCES).contains(&count) {
             return Err(Error::AckCount);
         }
         if data.len() != 1 + 8 * count {

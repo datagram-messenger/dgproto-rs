@@ -79,7 +79,7 @@ impl StaticKey {
             .prologue(PROLOGUE)
             .generate_keypair()
             .map_err(|_| Error::Handshake)
-            .and_then(|kp| Self::from_snow_keypair(kp))?;
+            .and_then(Self::from_snow_keypair)?;
         Ok(builder)
     }
 
