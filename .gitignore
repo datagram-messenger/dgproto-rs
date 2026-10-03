@@ -1,0 +1,33 @@
+# Rust / Cargo build output
+/target/
+/fuzz/target/
+
+# cargo-fuzz runtime output
+/fuzz/artifacts/
+/fuzz/corpus/
+
+# Local coverage and profiling output
+/coverage/
+*.profraw
+*.profdata
+
+# IDE and editor state
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local environment and logs
+.env
+.env.*
+!.env.example
+*.log
+
+# Cargo.lock and fuzz/Cargo.lock are intentionally tracked.
