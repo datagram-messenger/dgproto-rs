@@ -173,11 +173,14 @@ mod tests {
 
     #[test]
     fn test_tlv_alignment_padding() {
-        // value length 1 → unpadded = 4 → aligned = 4 (no extra padding)
-        let t = Tlv::new(2, b"x").expect("new");
+        // value length 2 → unpadded = 5 → aligned = 8 (3 padding bytes)
+        let t = Tlv::new(2, b"xy").expect("new");
         let wire = t.marshal_binary().expect("marshal");
-        assert_eq!(wire.len(), 4);
-        assert_eq!(wire[3], 0); // padding byte is zero
+        assert_eq!(wire.len(), 8);
+        // wire layout: [type=2][len_lo=2][len_hi=0][x][y][pad][pad][pad]
+        assert_eq!(wire[5], 0); // first padding byte is zero
+        assert_eq!(wire[6], 0); // second padding byte is zero
+        assert_eq!(wire[7], 0); // third padding byte is zero
     }
 
     #[test]
