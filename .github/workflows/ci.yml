@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ── Stable: test + lint ──────────────────────────────────────────────────────
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy -D warnings
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: cargo test (dev)
+        run: cargo test --all-features
+
+      - name: cargo test (release)
+        run: cargo test --release --all-features
+
+  # ── MSRV check ───────────────────────────────────────────────────────────────
+  msrv:
+    name: MSRV (Rust 1.80)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust 1.80
+        uses: dtolnay/rust-toolchain@1.80
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: msrv-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: cargo check (MSRV)
+        run: cargo check --all-features
+
+  # ── Fuzz smoke (nightly, Linux only) ─────────────────────────────────────────
+  fuzz:
+    name: Fuzz smoke
+    runs-on: ubuntu-latest
+    # Only run on push to main or when fuzz targets change.
+    if: github.event_name == 'push' || contains(github.event.pull_request.changed_files, 'fuzz/')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: fuzz-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Fuzz fuzz_header (30s)
+        run: cargo +nightly fuzz run fuzz_header -- -max_total_time=30
+        working-directory: fuzz
+
+      - name: Fuzz fuzz_frame (30s)
+        run: cargo +nightly fuzz run fuzz_frame -- -max_total_time=30
+        working-directory: fuzz
+
+      - name: Fuzz fuzz_tlv (30s)
+        run: cargo +nightly fuzz run fuzz_tlv -- -max_total_time=30
+        working-directory: fuzz
+
+      - name: Fuzz fuzz_messages (30s)
+        run: cargo +nightly fuzz run fuzz_messages -- -max_total_time=30
+        working-directory: fuzz

@@ -1,0 +1,83 @@
+[package]
+name        = "dgproto"
+version     = "0.1.0"
+edition     = "2021"
+rust-version = "1.80"
+description = "Rust client library for the DGProto v1 secure transport protocol"
+repository  = "https://github.com/datagram-messenger/dgproto-rs"
+license     = "Apache-2.0"
+keywords    = ["dgproto", "noise", "protocol", "datagram", "client"]
+categories  = ["network-programming", "cryptography"]
+readme      = "README.md"
+
+# Only lib — no binary targets. See AGENTS.md §11.
+[lib]
+name = "dgproto"
+path = "src/lib.rs"
+
+# ── Runtime dependencies ──────────────────────────────────────────────────────
+
+[dependencies]
+
+# Noise XX handshake (initiator role only).
+# default-features = false avoids pulling in ring; default-resolver uses RustCrypto.
+snow = { version = "0.9", default-features = false, features = ["default-resolver"] }
+
+# ChaCha20-Poly1305 AEAD for data frames.
+chacha20poly1305 = "0.10"
+
+# HMAC-SHA256 for rekey key derivation and confirmation.
+hmac = "0.12"
+sha2 = "0.10"
+
+# Async runtime — TCP transport, timers, sync primitives.
+tokio = { version = "1", features = [
+    "net",
+    "io-util",
+    "sync",
+    "time",
+    "rt-multi-thread",
+    "macros",
+] }
+
+# Cancellation token for coordinated connection shutdown.
+tokio-util = { version = "0.7", features = ["rt"] }
+
+# Zero-copy buffer management for transport read buffers.
+bytes = "1"
+
+# Ergonomic error derive — used only in error.rs.
+thiserror = "1"
+
+# Zeroize key material on drop.
+zeroize = { version = "1", features = ["derive"] }
+
+# ── Dev / test dependencies ───────────────────────────────────────────────────
+
+[dev-dependencies]
+
+# Load testdata/vectors/*.json in wire-vector tests.
+serde        = { version = "1", features = ["derive"] }
+serde_json   = "1"
+
+# Hex encoding/decoding in tests.
+hex = "0.4"
+
+# Async test macro.
+tokio = { version = "1", features = ["full", "test-util"] }
+
+# ── Fuzz ─────────────────────────────────────────────────────────────────────
+
+# cargo-fuzz targets live in fuzz/fuzz_targets/.
+# Run: cargo +nightly fuzz run fuzz_header -- -max_total_time=60
+
+
+[profile.release]
+opt-level = 3
+lto        = "thin"
+codegen-units = 1
+strip      = "symbols"
+
+[profile.dev]
+opt-level = 0
+debug      = true
