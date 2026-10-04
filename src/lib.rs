@@ -152,3 +152,109 @@ pub use messages::{
 };
 #[cfg(fuzzing)]
 pub use tlv::decode_tlvs;
+
+// ── Integration-test helpers ──────────────────────────────────────────────────
+// Always compiled but hidden from rustdoc. Integration tests (tests/*.rs) are
+// compiled as separate crates that link the library in its normal (non-test)
+// build, so `#[cfg(test)]` is NOT active in the library when integration tests
+// run. We therefore expose this module unconditionally and rely on `#[doc(hidden)]`
+// to keep it out of the public API surface.
+
+#[doc(hidden)]
+pub mod test_wire {
+    use crate::{
+        frame::Frame,
+        header::Header,
+        messages::{
+            Ack, EncryptedData, ErrorMessage, HandshakeFinish, HandshakeInit, HandshakeResponse,
+            PingPong, RekeyInit, SessionClose,
+        },
+        tlv::{decode_tlvs, encode_tlvs},
+        Error,
+    };
+
+    // ── Header ────────────────────────────────────────────────────────────────
+
+    /// Parse the header bytes from `wire` (must be exactly `HEADER_SIZE` bytes).
+    /// Returns `Ok(())` on success.
+    pub fn header_parse(wire: &[u8]) -> Result<(), Error> {
+        Header::unmarshal_binary(wire)?;
+        Ok(())
+    }
+
+    /// Parse then re-marshal a header. `wire` must be exactly `HEADER_SIZE` bytes.
+    /// Uses `marshal_binary_raw` so that reserved bytes are preserved verbatim.
+    pub fn header_roundtrip(wire: &[u8]) -> Result<Vec<u8>, Error> {
+        let h = Header::unmarshal_binary(wire)?;
+        Ok(h.marshal_binary_raw().to_vec())
+    }
+
+    // ── Frame ─────────────────────────────────────────────────────────────────
+
+    /// Parse a complete frame from `wire`. Returns `Ok(())` on success.
+    pub fn frame_parse(wire: &[u8]) -> Result<(), Error> {
+        Frame::unmarshal_binary(wire)?;
+        Ok(())
+    }
+
+    /// Parse then re-marshal a frame. Returns the re-encoded bytes.
+    ///
+    /// Returns `Err(Error::FrameLengthMismatch)` if `wire` contains trailing
+    /// bytes beyond the frame declared by the header (Go rejects this too).
+    pub fn frame_roundtrip(wire: &[u8]) -> Result<Vec<u8>, Error> {
+        let f = Frame::unmarshal_binary(wire)?;
+        // Reject trailing bytes — the frame must consume exactly `frame_size` bytes.
+        let expected_len = f.header.frame_size() as usize;
+        if wire.len() != expected_len {
+            return Err(Error::FrameLengthMismatch);
+        }
+        f.marshal_binary()
+    }
+
+    // ── TLV ───────────────────────────────────────────────────────────────────
+
+    /// Parse a TLV sequence from `wire`. Returns `Ok(())` on success.
+    pub fn tlv_parse(wire: &[u8]) -> Result<(), Error> {
+        decode_tlvs(wire, wire.len())?;
+        Ok(())
+    }
+
+    /// Parse then re-encode a TLV sequence. Returns the re-encoded bytes.
+    pub fn tlv_roundtrip(wire: &[u8]) -> Result<Vec<u8>, Error> {
+        let tlvs = decode_tlvs(wire, wire.len())?;
+        encode_tlvs(&tlvs)
+    }
+
+    // ── Messages ──────────────────────────────────────────────────────────────
+
+    /// Parse a message of the given wire type from `wire`, then re-serialise it.
+    /// Returns the re-serialised bytes (must be byte-for-byte identical to `wire`).
+    ///
+    /// Type 0x07 is reserved and always returns `Err(Error::MessageType)`.
+    pub fn message_roundtrip(msg_type: u8, wire: &[u8]) -> Result<Vec<u8>, Error> {
+        match msg_type {
+            0x01 => HandshakeInit::unmarshal_binary(wire)?.marshal_binary(),
+            0x02 => HandshakeResponse::unmarshal_binary(wire)?.marshal_binary(),
+            0x03 => {
+                // Post-handshake EncryptedData (session ID is non-zero in real
+                // frames; the vector uses type 0x03 for EncryptedData).
+                EncryptedData::unmarshal_binary(wire)?.marshal_binary()
+            }
+            0x04 => PingPong::unmarshal_binary(wire)?.marshal_binary(),
+            0x05 => SessionClose::unmarshal_binary(wire)?.marshal_binary(),
+            0x06 => Ack::unmarshal_binary(wire)?.marshal_binary(),
+            0x07 => Err(Error::MessageType),
+            0x08 => RekeyInit::unmarshal_binary(wire)?.marshal_binary(),
+            0x09 => ErrorMessage::unmarshal_binary(wire)?.marshal_binary(),
+            _ => Err(Error::MessageType),
+        }
+    }
+
+    // ── Handshake finish (type 0x03 with zero session ID) ─────────────────────
+
+    /// Parse a HandshakeFinish payload (64-byte Noise message 3).
+    #[allow(dead_code)]
+    pub fn handshake_finish_roundtrip(wire: &[u8]) -> Result<Vec<u8>, Error> {
+        HandshakeFinish::unmarshal_binary(wire)?.marshal_binary()
+    }
+}
