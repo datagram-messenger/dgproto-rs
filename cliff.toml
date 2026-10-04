@@ -1,0 +1,42 @@
+# git-cliff — release notes config for dgproto-rs
+# Docs: https://git-cliff.org/docs/configuration
+# Used by release.yml to generate GitHub Release notes automatically.
+
+[changelog]
+header = ""
+body = """
+{% for group, commits in commits | group_by(attribute="group") %}\
+### {{ group | upper_first }}
+{% for commit in commits %}\
+- {% if commit.breaking %}**BREAKING** {% endif %}{{ commit.message | upper_first }}{% if commit.scope %} *({{ commit.scope }})*{% endif %}
+{% endfor %}
+{% endfor %}
+"""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+commit_preprocessors = [
+  { pattern = '(.*)\.$', replace = "$1" },
+]
+commit_parsers = [
+  { message = "^.*!:",        group = "Breaking changes" },
+  { body    = ".*BREAKING CHANGE.*", group = "Breaking changes" },
+  { message = "^feat",        group = "Features" },
+  { message = "^fix",         group = "Bug fixes" },
+  { message = "^perf",        group = "Performance" },
+  { message = "^refactor",    group = "Refactoring" },
+  { message = "^docs",        group = "Documentation" },
+  { message = "^test",        group = "Tests" },
+  { message = "^chore",       skip = true },
+  { message = "^ci",          skip = true },
+  { message = "^style",       skip = true },
+  { message = ".*",           skip = true },
+]
+sort_commits = "newest"
+tag_pattern = 'v[0-9]+\.[0-9]+\.[0-9]+'
+
+[remote.github]
+owner = "datagram-messenger"
+repo  = "dgproto-rs"
