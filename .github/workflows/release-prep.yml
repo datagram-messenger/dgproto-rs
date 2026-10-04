@@ -1,0 +1,115 @@
+name: Release prep
+
+# Manually triggered by a maintainer to prepare a release.
+# Inputs:
+#   version  — the new semver string, e.g. "0.2.0" (without the "v" prefix).
+#
+# What this workflow does:
+#   1. Creates a release branch  chore/release-v<version>.
+#   2. Bumps the version in Cargo.toml (and updates Cargo.lock).
+#   3. Commits the change and opens a PR against main.
+#
+# Changelog / release notes are generated automatically by release.yml when the
+# tag is pushed — there is no CHANGELOG.md file in this repository.
+#
+# After the PR is merged, a maintainer pushes the tag:
+#   git tag v<version> && git push origin v<version>
+# That tag push triggers release.yml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'New crate version (semver, no "v" prefix) — e.g. 0.2.0'
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: write        # push the release branch
+  pull-requests: write   # open the PR
+
+jobs:
+  prepare:
+    name: Prepare release v${{ inputs.version }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Validate input ──────────────────────────────────────────────────────
+      - name: Validate version format
+        shell: bash
+        run: |
+          VERSION="${{ inputs.version }}"
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Version '$VERSION' is not a valid semver (expected X.Y.Z)"
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "TAG=v$VERSION"    >> "$GITHUB_ENV"
+          echo "BRANCH=chore/release-v$VERSION" >> "$GITHUB_ENV"
+
+      # ── Install tooling ─────────────────────────────────────────────────────
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      # ── Create release branch ───────────────────────────────────────────────
+      - name: Create release branch
+        run: |
+          git checkout -b "$BRANCH"
+
+      # ── Bump version in Cargo.toml ──────────────────────────────────────────
+      - name: Bump Cargo.toml version
+        shell: bash
+        run: |
+          # Replace the version line in [package] section only.
+          sed -i "s/^version *= *\"[^\"]*\"/version = \"$VERSION\"/" Cargo.toml
+          # Verify the change.
+          grep '^version' Cargo.toml
+          # Update Cargo.lock to reflect the new version.
+          cargo update --workspace --locked 2>/dev/null || cargo generate-lockfile
+
+      # ── Commit and push ─────────────────────────────────────────────────────
+      - name: Commit version bump
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Cargo.toml Cargo.lock
+          git commit -m "chore(release): bump version to $VERSION"
+          git push -u origin "$BRANCH"
+
+      # ── Open PR ─────────────────────────────────────────────────────────────
+      # The branch was already committed and pushed in the previous step, so we
+      # use the GitHub CLI (`gh pr create`) rather than peter-evans/create-pull-request.
+      # peter-evans/create-pull-request is an all-in-one action that manages its
+      # own commit/push cycle; calling it after a manual push causes it to
+      # overwrite or conflict with the already-pushed branch.
+      - name: Open pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --head "$BRANCH" \
+            --base main \
+            --title "chore(release): prepare v$VERSION" \
+            --body "## Release v$VERSION
+
+This PR was opened automatically by the **Release prep** workflow.
+
+### Checklist
+
+- [ ] Review the version bump in \`Cargo.toml\`.
+- [ ] Ensure all CI checks pass.
+- [ ] Merge this PR (squash or rebase — no merge commits).
+- [ ] After merge, push the release tag:
+      \`\`\`
+      git checkout main && git pull
+      git tag v$VERSION
+      git push origin v$VERSION
+      \`\`\`
+      The tag push triggers \`release.yml\`, which runs CI, publishes to crates.io,
+      and creates the GitHub Release with auto-generated release notes." \
+            --no-maintainer-edit

@@ -1,0 +1,171 @@
+name: Release
+
+# Triggered by a semver tag pushed to origin.
+# Tags must be created by the release-prep workflow (or manually) and follow
+# the pattern v<major>.<minor>.<patch> (e.g. v0.1.0, v1.2.3).
+#
+# What this workflow does:
+#   1. Runs the full CI suite (same gates as ci.yml) to guard against a bad tag.
+#   2. Publishes the crate to crates.io.
+#   3. Creates a GitHub Release with the changelog section for this version.
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+permissions:
+  contents: write   # needed to create the GitHub Release
+
+jobs:
+  # ── 1. Full CI gate ──────────────────────────────────────────────────────────
+  # Re-run the same checks as ci.yml so a bad tag cannot slip through.
+  ci:
+    name: CI gate (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy -D warnings
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: cargo test (dev)
+        run: cargo test --all-features
+
+      - name: cargo test (release)
+        run: cargo test --release --all-features
+
+      - name: cargo doc (no-deps)
+        run: cargo doc --all-features --no-deps
+        env:
+          RUSTDOCFLAGS: '-D warnings'
+
+  # ── 2. MSRV check ────────────────────────────────────────────────────────────
+  msrv:
+    name: MSRV (Rust 1.80)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust 1.80
+        uses: dtolnay/rust-toolchain@1.80
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: msrv-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: cargo check (MSRV)
+        run: cargo check --all-features
+
+  # ── 3. Verify Cargo.toml version matches the tag ─────────────────────────────
+  verify-version:
+    name: Verify version
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Cargo.toml version matches tag
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"          # e.g. v0.1.0
+          CRATE_VER="v$(cargo metadata --no-deps --format-version 1 \
+            | jq -r '.packages[0].version')"
+          echo "Tag:   $TAG"
+          echo "Crate: $CRATE_VER"
+          if [ "$TAG" != "$CRATE_VER" ]; then
+            echo "::error::Tag $TAG does not match Cargo.toml version $CRATE_VER"
+            exit 1
+          fi
+
+  # ── 4. Publish to crates.io ──────────────────────────────────────────────────
+  publish:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    needs: [ci, msrv, verify-version]
+    environment: crates-io   # optional: gate behind a GitHub environment for approval
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: publish-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: cargo publish
+        run: cargo publish --locked
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  # ── 5. Create GitHub Release ─────────────────────────────────────────────────
+  github-release:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    needs: [publish]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # git-cliff needs full history to diff against previous tag
+
+      - name: Install git-cliff
+        uses: taiki-e/install-action@v2
+        with:
+          tool: git-cliff
+
+      - name: Generate release notes for this tag
+        shell: bash
+        run: |
+          # --current: commits reachable from HEAD that are NOT in any previous tag.
+          # --strip header: omit the "# Changelog" header line — just the section body.
+          git-cliff --config cliff.toml --current --strip header > release-notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: '${{ github.ref_name }}'
+          body_path: release-notes.md
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
