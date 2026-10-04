@@ -173,12 +173,7 @@ fn aead_encrypt(key: &[u8; 32], sequence: u64, aad: &[u8], plaintext: &[u8]) -> 
 }
 
 /// Decrypt `ciphertext_with_tag` (ciphertext || 16-byte tag) with `key` and `sequence`.
-fn aead_decrypt(
-    key: &[u8; 32],
-    sequence: u64,
-    aad: &[u8],
-    ciphertext_with_tag: &[u8],
-) -> Vec<u8> {
+fn aead_decrypt(key: &[u8; 32], sequence: u64, aad: &[u8], ciphertext_with_tag: &[u8]) -> Vec<u8> {
     let cipher = ChaCha20Poly1305::new(Key::from_slice(key));
     let nonce = make_nonce(sequence);
     cipher
@@ -260,11 +255,7 @@ fn parse_rekey_init(payload: &[u8]) -> (u32, [u8; 32]) {
 /// send direction.  Terminates cleanly on `SessionClose`.
 ///
 /// `server_private_key` is the 32-byte X25519 private key for the server.
-async fn run_echo_server(
-    mut stream: TcpStream,
-    server_private_key: [u8; 32],
-    ready: Arc<Notify>,
-) {
+async fn run_echo_server(mut stream: TcpStream, server_private_key: [u8; 32], ready: Arc<Notify>) {
     // ── Noise XX responder handshake ──────────────────────────────────────────
 
     let mut noise = snow::Builder::new(NOISE_PARAMS.parse().expect("noise params"))
@@ -322,7 +313,11 @@ async fn run_echo_server(
         "expected HandshakeFinish (0x03), got 0x{msg_type3:02x}"
     );
     // Noise message 3 = 64 bytes.
-    assert_eq!(payload3.len(), 64, "HandshakeFinish payload must be 64 bytes");
+    assert_eq!(
+        payload3.len(),
+        64,
+        "HandshakeFinish payload must be 64 bytes"
+    );
     let mut tmp3 = vec![0u8; 256];
     let _n3 = noise
         .read_message(&payload3, &mut tmp3)
@@ -375,7 +370,8 @@ async fn run_echo_server(
                 );
                 let echo_aad = frame_aad(&echo_hdr, &[]);
                 let echo_ct_tag = aead_encrypt(&server_send_key, send_seq, &echo_aad, &plaintext);
-                let (echo_ct, echo_tag_bytes) = echo_ct_tag.split_at(echo_ct_tag.len() - AEAD_TAG_SIZE);
+                let (echo_ct, echo_tag_bytes) =
+                    echo_ct_tag.split_at(echo_ct_tag.len() - AEAD_TAG_SIZE);
                 let mut echo_tag = [0u8; AEAD_TAG_SIZE];
                 echo_tag.copy_from_slice(echo_tag_bytes);
                 write_frame(
@@ -413,7 +409,8 @@ async fn run_echo_server(
                 );
                 let pong_aad = frame_aad(&pong_hdr, &[]);
                 let pong_ct_tag = aead_encrypt(&server_send_key, send_seq, &pong_aad, &plaintext);
-                let (pong_ct, pong_tag_bytes) = pong_ct_tag.split_at(pong_ct_tag.len() - AEAD_TAG_SIZE);
+                let (pong_ct, pong_tag_bytes) =
+                    pong_ct_tag.split_at(pong_ct_tag.len() - AEAD_TAG_SIZE);
                 let mut pong_tag = [0u8; AEAD_TAG_SIZE];
                 pong_tag.copy_from_slice(pong_tag_bytes);
                 write_frame(
@@ -471,8 +468,7 @@ async fn run_echo_server(
                     0,
                 );
                 let rk_aad = frame_aad(&rk_hdr, &[]);
-                let rk_ct_tag =
-                    aead_encrypt(&server_send_key, send_seq, &rk_aad, &rekey_payload);
+                let rk_ct_tag = aead_encrypt(&server_send_key, send_seq, &rk_aad, &rekey_payload);
                 let (rk_ct, rk_tag_bytes) = rk_ct_tag.split_at(rk_ct_tag.len() - AEAD_TAG_SIZE);
                 let mut rk_tag = [0u8; AEAD_TAG_SIZE];
                 rk_tag.copy_from_slice(rk_tag_bytes);
@@ -514,17 +510,12 @@ async fn spawn_echo_server(server_private_key: [u8; 32]) -> std::net::SocketAddr
     let listener = TcpListener::bind("127.0.0.1:0")
         .await
         .expect("bind loopback listener");
-    let addr = listener
-        .local_addr()
-        .expect("local_addr");
+    let addr = listener.local_addr().expect("local_addr");
     let ready = Arc::new(Notify::new());
     let ready2 = ready.clone();
 
     tokio::spawn(async move {
-        let (stream, _peer) = listener
-            .accept()
-            .await
-            .expect("accept loopback connection");
+        let (stream, _peer) = listener.accept().await.expect("accept loopback connection");
         run_echo_server(stream, server_private_key, ready2).await;
     });
 
@@ -790,8 +781,5 @@ async fn test_integration_abort() {
         app_message_type: 0x00,
         fields: b"should fail".to_vec(),
     });
-    assert!(
-        result.is_err(),
-        "send after abort must return Err, got Ok"
-    );
+    assert!(result.is_err(), "send after abort must return Err, got Ok");
 }
