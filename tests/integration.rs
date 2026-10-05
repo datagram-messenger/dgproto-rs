@@ -322,7 +322,10 @@ async fn run_echo_server(mut stream: TcpStream, server_private_key: [u8; 32]) {
     let (hdr3, payload3, _tag3, _pad3) = read_frame(&mut stream).await;
     let (msg_type3, _, _, _, _) = parse_header(&hdr3);
     eprintln!("[echo] flight3 hdr[0..8]: {:02x?}", &hdr3[..8]);
-    eprintln!("[echo] flight3: msg_type=0x{msg_type3:02x} payload_len={}", payload3.len());
+    eprintln!(
+        "[echo] flight3: msg_type=0x{msg_type3:02x} payload_len={}",
+        payload3.len()
+    );
     assert_eq!(
         msg_type3, MSG_ENCRYPTED_DATA,
         "expected HandshakeFinish (0x03), got 0x{msg_type3:02x}"
