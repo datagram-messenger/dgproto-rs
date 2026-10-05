@@ -494,7 +494,7 @@ impl Connection {
                         Err(e) => { self.shutdown(e); return; }
                     }
                 }
-                _ = self.inner.cancel.cancelled() => return,
+                _ = self.inner.cancel.cancelled() => { return; },
             };
 
             let plaintext = match self.inner.session.decrypt_frame(&frame).await {

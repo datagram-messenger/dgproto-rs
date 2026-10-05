@@ -17,7 +17,6 @@ use dgproto::{ClientConfig, Connection, EncryptedData, StaticKey};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
-    sync::Notify,
 };
 
 // ── Echo-server stub ──────────────────────────────────────────────────────────
@@ -94,18 +93,30 @@ fn build_header(
     h
 }
 
+/// Message types that carry an AEAD tag on the wire.
+/// HandshakeInit (0x01) and HandshakeResponse (0x02) do NOT have a tag.
+fn msg_type_has_aead_tag(msg_type: u8) -> bool {
+    msg_type != MSG_HANDSHAKE_INIT && msg_type != MSG_HANDSHAKE_RESPONSE
+}
+
 /// Read one complete frame from `stream`.
 /// Returns `(header_bytes, payload_bytes, tag_bytes, padding_bytes)`.
+/// `tag_bytes` is empty for handshake frames that carry no AEAD tag.
 async fn read_frame(stream: &mut TcpStream) -> (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) {
     let hdr = read_exact(stream, HEADER_SIZE).await;
-    let (_, _, _, payload_len, pad_len) = parse_header(&hdr);
+    let (msg_type, _, _, payload_len, pad_len) = parse_header(&hdr);
     let payload = read_exact(stream, payload_len as usize).await;
-    let tag = read_exact(stream, AEAD_TAG_SIZE).await;
+    let tag = if msg_type_has_aead_tag(msg_type) {
+        read_exact(stream, AEAD_TAG_SIZE).await
+    } else {
+        vec![]
+    };
     let padding = read_exact(stream, pad_len as usize).await;
     (hdr, payload, tag, padding)
 }
 
 /// Write one complete frame to `stream`.
+/// `tag` is written only for message types that carry an AEAD tag.
 async fn write_frame(
     stream: &mut TcpStream,
     msg_type: u8,
@@ -130,10 +141,12 @@ async fn write_frame(
         .write_all(payload)
         .await
         .expect("write_frame: payload write failed");
-    stream
-        .write_all(tag)
-        .await
-        .expect("write_frame: tag write failed");
+    if msg_type_has_aead_tag(msg_type) {
+        stream
+            .write_all(tag)
+            .await
+            .expect("write_frame: tag write failed");
+    }
     if !padding.is_empty() {
         stream
             .write_all(padding)
@@ -255,7 +268,7 @@ fn parse_rekey_init(payload: &[u8]) -> (u32, [u8; 32]) {
 /// send direction.  Terminates cleanly on `SessionClose`.
 ///
 /// `server_private_key` is the 32-byte X25519 private key for the server.
-async fn run_echo_server(mut stream: TcpStream, server_private_key: [u8; 32], ready: Arc<Notify>) {
+async fn run_echo_server(mut stream: TcpStream, server_private_key: [u8; 32]) {
     // ── Noise XX responder handshake ──────────────────────────────────────────
 
     let mut noise = snow::Builder::new(NOISE_PARAMS.parse().expect("noise params"))
@@ -308,6 +321,11 @@ async fn run_echo_server(mut stream: TcpStream, server_private_key: [u8; 32], re
     // Flight 3: receive HandshakeFinish (type 0x03, zero session ID).
     let (hdr3, payload3, _tag3, _pad3) = read_frame(&mut stream).await;
     let (msg_type3, _, _, _, _) = parse_header(&hdr3);
+    eprintln!("[echo] flight3 hdr[0..8]: {:02x?}", &hdr3[..8]);
+    eprintln!(
+        "[echo] flight3: msg_type=0x{msg_type3:02x} payload_len={}",
+        payload3.len()
+    );
     assert_eq!(
         msg_type3, MSG_ENCRYPTED_DATA,
         "expected HandshakeFinish (0x03), got 0x{msg_type3:02x}"
@@ -322,6 +340,7 @@ async fn run_echo_server(mut stream: TcpStream, server_private_key: [u8; 32], re
     let _n3 = noise
         .read_message(&payload3, &mut tmp3)
         .expect("noise read_message flight 3 failed");
+    eprintln!("[echo] handshake complete, entering data loop");
 
     // Extract directional keys using the risky-raw-split API.
     // Initiator send key = first output (k1); initiator receive key = second (k2).
@@ -337,8 +356,6 @@ async fn run_echo_server(mut stream: TcpStream, server_private_key: [u8; 32], re
     let session_id = derive_session_id(&handshake_hash);
 
     // Signal that the server is ready (handshake complete).
-    ready.notify_one();
-
     // ── Data loop ─────────────────────────────────────────────────────────────
 
     let mut _recv_seq: u64 = 0; // last accepted receive sequence (tracked for future use)
@@ -347,7 +364,9 @@ async fn run_echo_server(mut stream: TcpStream, server_private_key: [u8; 32], re
     let mut send_epoch: u32 = 1;
 
     loop {
+        eprintln!("[echo] data loop: waiting for frame...");
         let (hdr, payload, tag, padding) = read_frame(&mut stream).await;
+        eprintln!("[echo] data loop: got frame msg_type=0x{:02x}", hdr[6]);
         let (msg_type, _, sequence, _, _) = parse_header(&hdr);
 
         match msg_type {
@@ -511,15 +530,25 @@ async fn spawn_echo_server(server_private_key: [u8; 32]) -> std::net::SocketAddr
         .await
         .expect("bind loopback listener");
     let addr = listener.local_addr().expect("local_addr");
-    let ready = Arc::new(Notify::new());
-    let ready2 = ready.clone();
-
     tokio::spawn(async move {
         let (stream, _peer) = listener.accept().await.expect("accept loopback connection");
-        run_echo_server(stream, server_private_key, ready2).await;
+        run_echo_server(stream, server_private_key).await;
     });
 
     addr
+}
+
+/// Encode a single TLV field: [type u8][len u16 LE][value][zero-padding to 4-byte boundary].
+fn make_tlv_fields(typ: u8, value: &[u8]) -> Vec<u8> {
+    let len = value.len();
+    let unpadded = 3 + len;
+    let aligned = (unpadded + 3) & !3;
+    let mut buf = vec![0u8; aligned];
+    buf[0] = typ;
+    buf[1] = (len & 0xFF) as u8;
+    buf[2] = ((len >> 8) & 0xFF) as u8;
+    buf[3..3 + len].copy_from_slice(value);
+    buf
 }
 
 /// Generate a random X25519 keypair via snow and return `(private_key, public_key)`.
@@ -553,7 +582,7 @@ fn loopback_config(client_key: StaticKey) -> ClientConfig {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 /// Full loopback: handshake → send EncryptedData → receive echo → SessionClose.
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_integration_handshake_and_echo() {
     let (server_priv, _server_pub) = generate_server_keypair();
     let client_key = StaticKey::generate().expect("client StaticKey::generate");
@@ -601,12 +630,15 @@ async fn test_integration_handshake_and_echo() {
         "session_id must be non-zero after handshake"
     );
 
+    // Give the echo server a moment to enter its data loop.
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
     // Send EncryptedData.
     let payload = b"hello dgproto".to_vec();
     conn.send_and_wait(EncryptedData {
         stream_id: 1,
         app_message_type: 0x01,
-        fields: payload.clone(),
+        fields: make_tlv_fields(1, &payload),
     })
     .await
     .expect("send_and_wait EncryptedData");
@@ -620,10 +652,11 @@ async fn test_integration_handshake_and_echo() {
         {
             let guard = received.lock().await;
             if !guard.is_empty() {
+                let expected_fields = make_tlv_fields(1, &payload);
                 assert_eq!(
-                    guard[0], payload,
+                    guard[0], expected_fields,
                     "echo payload mismatch: got {:?}, want {:?}",
-                    guard[0], payload
+                    guard[0], expected_fields
                 );
                 break;
             }
@@ -636,7 +669,7 @@ async fn test_integration_handshake_and_echo() {
 }
 
 /// Keepalive ping/pong round-trip.
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_integration_keepalive_ping_pong() {
     let (server_priv, _server_pub) = generate_server_keypair();
     let client_key = StaticKey::generate().expect("client StaticKey::generate");
@@ -670,7 +703,7 @@ async fn test_integration_keepalive_ping_pong() {
     conn.send_and_wait(EncryptedData {
         stream_id: 0,
         app_message_type: 0x00,
-        fields: b"ping-pong-ok".to_vec(),
+        fields: make_tlv_fields(1, b"ping-pong-ok"),
     })
     .await
     .expect("send_and_wait after keepalive cycles");
@@ -688,7 +721,7 @@ async fn test_integration_keepalive_ping_pong() {
 ///
 /// A deeper rekey unit test lives in `src/session.rs`; this test focuses on
 /// the end-to-end path through `Connection`.
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_integration_rekey_transition() {
     let (server_priv, _server_pub) = generate_server_keypair();
     let client_key = StaticKey::generate().expect("client StaticKey::generate");
@@ -732,7 +765,7 @@ async fn test_integration_rekey_transition() {
         conn.send_and_wait(EncryptedData {
             stream_id: 1,
             app_message_type: 0x01,
-            fields: format!("frame-{i}").into_bytes(),
+            fields: make_tlv_fields(1, format!("frame-{i}").as_bytes()),
         })
         .await
         .unwrap_or_else(|e| panic!("send_and_wait frame {i}: {e}"));
@@ -756,7 +789,7 @@ async fn test_integration_rekey_transition() {
 
 /// Connection abort: verify that `abort()` terminates the connection
 /// immediately and that subsequent `send` calls return an error.
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_integration_abort() {
     let (server_priv, _server_pub) = generate_server_keypair();
     let client_key = StaticKey::generate().expect("client StaticKey::generate");
