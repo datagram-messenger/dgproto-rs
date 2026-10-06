@@ -295,7 +295,7 @@ impl Connection {
         let (finish_payload, secrets) = hs.write_finish()?;
         let finish_frame = Frame {
             header: Header::new(
-                MessageType::EncryptedData, // 0x03 — same wire type as HandshakeFinish
+                MessageType::EncryptedData, // 0x03 — HandshakeFinish shares wire type with EncryptedData (zero session ID)
                 [0u8; 16],
                 0,
                 finish_payload.len() as u32,
