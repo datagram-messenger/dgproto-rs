@@ -9,6 +9,11 @@ use thiserror::Error;
 ///
 /// The enum is `#[non_exhaustive]` — callers must handle a `_` arm so that
 /// new variants can be added without a breaking change.
+///
+/// # Equality
+///
+/// `Error` implements `PartialEq`. Two `Error::Io` values are equal when their
+/// [`std::io::ErrorKind`]s match (the underlying OS error code is ignored).
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum Error {
@@ -359,4 +364,71 @@ pub enum Error {
     /// An unclassified I/O error from the underlying TCP socket.
     #[error("dgproto: I/O error: {0}")]
     Io(#[from] std::io::Error),
+}
+
+impl PartialEq for Error {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::HeaderTooShort, Self::HeaderTooShort) => true,
+            (Self::InvalidMagic, Self::InvalidMagic) => true,
+            (Self::UnsupportedVersion { got: a }, Self::UnsupportedVersion { got: b }) => a == b,
+            (Self::ReservedFlags, Self::ReservedFlags) => true,
+            (Self::PaddingFlag, Self::PaddingFlag) => true,
+            (Self::FrameTooShort, Self::FrameTooShort) => true,
+            (Self::FrameTooLarge, Self::FrameTooLarge) => true,
+            (Self::FrameLengthMismatch, Self::FrameLengthMismatch) => true,
+            (Self::PayloadTooLarge, Self::PayloadTooLarge) => true,
+            (Self::TagLength, Self::TagLength) => true,
+            (Self::PaddingLength, Self::PaddingLength) => true,
+            (Self::TlvTooShort, Self::TlvTooShort) => true,
+            (Self::TlvTruncated, Self::TlvTruncated) => true,
+            (Self::TlvValueTooLarge, Self::TlvValueTooLarge) => true,
+            (Self::TlvDecodeLimit, Self::TlvDecodeLimit) => true,
+            (Self::TlvSequenceLimit, Self::TlvSequenceLimit) => true,
+            (Self::TlvElementLimit, Self::TlvElementLimit) => true,
+            (Self::MessageTooShort, Self::MessageTooShort) => true,
+            (Self::MessageLength, Self::MessageLength) => true,
+            (Self::MessageReserved, Self::MessageReserved) => true,
+            (Self::MessageType, Self::MessageType) => true,
+            (Self::AckCount, Self::AckCount) => true,
+            (Self::InvalidUtf8, Self::InvalidUtf8) => true,
+            (Self::ReasonTooLong, Self::ReasonTooLong) => true,
+            (Self::UnknownMessageTlv, Self::UnknownMessageTlv) => true,
+            (Self::DuplicateMessageTlv, Self::DuplicateMessageTlv) => true,
+            (Self::InvalidCloseCode, Self::InvalidCloseCode) => true,
+            (Self::HandshakeAlignment, Self::HandshakeAlignment) => true,
+            (Self::InvalidNoisePattern, Self::InvalidNoisePattern) => true,
+            (Self::UnexpectedNoiseData, Self::UnexpectedNoiseData) => true,
+            (Self::InvalidPingResponse, Self::InvalidPingResponse) => true,
+            (Self::InvalidKeySize { got: a }, Self::InvalidKeySize { got: b }) => a == b,
+            (Self::Authentication, Self::Authentication) => true,
+            (Self::InvalidSequence, Self::InvalidSequence) => true,
+            (Self::InvalidSessionId, Self::InvalidSessionId) => true,
+            (Self::Handshake, Self::Handshake) => true,
+            (Self::InvalidStaticKey, Self::InvalidStaticKey) => true,
+            (Self::ReplayZero, Self::ReplayZero) => true,
+            (Self::ReplayDuplicate, Self::ReplayDuplicate) => true,
+            (Self::ReplayTooOld, Self::ReplayTooOld) => true,
+            (Self::ReplayStale, Self::ReplayStale) => true,
+            (Self::SessionClosed, Self::SessionClosed) => true,
+            (Self::WrongSession, Self::WrongSession) => true,
+            (Self::SequenceExhausted, Self::SequenceExhausted) => true,
+            (Self::RekeyPending, Self::RekeyPending) => true,
+            (Self::InvalidEpoch { got: ag, want: aw }, Self::InvalidEpoch { got: bg, want: bw }) => {
+                ag == bg && aw == bw
+            }
+            (Self::EpochExhausted, Self::EpochExhausted) => true,
+            (Self::KeyConfirmFailed, Self::KeyConfirmFailed) => true,
+            (Self::TransportFrameTooShort, Self::TransportFrameTooShort) => true,
+            (Self::TransportFrameTooLarge, Self::TransportFrameTooLarge) => true,
+            (Self::TransportClosed, Self::TransportClosed) => true,
+            (Self::ConnectionClosed, Self::ConnectionClosed) => true,
+            (Self::IdleTimeout, Self::IdleTimeout) => true,
+            (Self::KeepaliveTimeout, Self::KeepaliveTimeout) => true,
+            (Self::OutboundQueueFull, Self::OutboundQueueFull) => true,
+            // Two I/O errors are equal when their kinds match.
+            (Self::Io(a), Self::Io(b)) => a.kind() == b.kind(),
+            _ => false,
+        }
+    }
 }

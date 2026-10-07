@@ -19,6 +19,8 @@
 //!   written to the TCP socket, not acknowledged by the peer.
 //! - [`send_padded`](Connection::send_padded) — like `send`, with explicit
 //!   random padding (0–255 bytes). Padding policy is the caller's responsibility.
+//! - [`send_and_wait_padded`](Connection::send_and_wait_padded) — like
+//!   `send_and_wait`, with explicit random padding.
 //!
 //! # Lifecycle
 //!
@@ -422,6 +424,36 @@ impl Connection {
         rx.await.map_err(|_| Error::ConnectionClosed)?
     }
 
+    /// Like [`send_and_wait`](Self::send_and_wait), with explicit random padding
+    /// (0–255 bytes).
+    ///
+    /// Enqueues the message with `pad_len` bytes of random padding and awaits a
+    /// oneshot confirmation from the write loop. Success means the frame was
+    /// written to the TCP socket, not acknowledged by the peer.
+    ///
+    /// A `pad_len` of `0` is equivalent to calling [`send_and_wait`](Self::send_and_wait).
+    /// Padding policy is the caller's responsibility.
+    pub async fn send_and_wait_padded(
+        &self,
+        msg: impl Into<ApplicationMessage>,
+        pad_len: u8,
+    ) -> Result<(), Error> {
+        if self.inner.closing.load(Ordering::Relaxed) {
+            return Err(Error::ConnectionClosed);
+        }
+        let (tx, rx) = oneshot::channel();
+        self.inner
+            .outbound
+            .send(QueuedMessage {
+                msg: msg.into(),
+                pad_len,
+                completion: Some(tx),
+            })
+            .await
+            .map_err(|_| Error::ConnectionClosed)?;
+        rx.await.map_err(|_| Error::ConnectionClosed)?
+    }
+
     /// Initiate a graceful `SessionClose` exchange and wait for completion.
     pub async fn close(&self) -> Result<(), Error> {
         let (tx, rx) = oneshot::channel();
@@ -455,6 +487,14 @@ impl Connection {
     /// Return the server's 32-byte Noise static public key.
     pub fn peer_static(&self) -> [u8; 32] {
         self.inner.peer_static
+    }
+
+    /// Return `true` if the connection has been closed or aborted.
+    ///
+    /// Once this returns `true` all subsequent [`send`](Self::send) calls will
+    /// return [`Error::ConnectionClosed`].
+    pub fn is_closed(&self) -> bool {
+        self.inner.closing.load(Ordering::Relaxed)
     }
 
     // ── Internal helpers ──────────────────────────────────────────────────────
