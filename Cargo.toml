@@ -1,6 +1,6 @@
 [package]
 name        = "dgproto"
-version     = "0.1.2"
+version     = "0.1.1"
 edition     = "2021"
 rust-version = "1.80"
 description = "Rust client library for the DGProto v1 secure transport protocol"
