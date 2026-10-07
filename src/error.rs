@@ -414,9 +414,10 @@ impl PartialEq for Error {
             (Self::WrongSession, Self::WrongSession) => true,
             (Self::SequenceExhausted, Self::SequenceExhausted) => true,
             (Self::RekeyPending, Self::RekeyPending) => true,
-            (Self::InvalidEpoch { got: ag, want: aw }, Self::InvalidEpoch { got: bg, want: bw }) => {
-                ag == bg && aw == bw
-            }
+            (
+                Self::InvalidEpoch { got: ag, want: aw },
+                Self::InvalidEpoch { got: bg, want: bw },
+            ) => ag == bg && aw == bw,
             (Self::EpochExhausted, Self::EpochExhausted) => true,
             (Self::KeyConfirmFailed, Self::KeyConfirmFailed) => true,
             (Self::TransportFrameTooShort, Self::TransportFrameTooShort) => true,
