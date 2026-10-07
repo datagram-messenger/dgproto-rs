@@ -131,7 +131,9 @@ impl StaticKey {
     }
 
     /// Return the private key bytes (used internally by `InitiatorHandshake`).
-    pub(crate) fn private(&self) -> &[u8; 32] {
+    ///
+    /// Intentionally module-private: the private key must never leave this module.
+    fn private(&self) -> &[u8; 32] {
         &self.private
     }
 }
