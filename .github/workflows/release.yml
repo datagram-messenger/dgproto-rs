@@ -158,30 +158,24 @@ jobs:
   github-release:
     name: GitHub Release
     runs-on: ubuntu-latest
-    needs: [publish]
+    needs: [ci, msrv, verify-version]
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # git-cliff needs full history to diff against previous tag
+          ref: refs/tags/${{ github.ref_name }}
+          persist-credentials: false
 
-      - name: Install git-cliff
-        uses: taiki-e/install-action@v2
-        with:
-          tool: git-cliff
-
-      - name: Generate release notes for this tag
+      - name: Create GitHub Release with generated notes if absent
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          # --current: commits reachable from HEAD that are NOT in any previous tag.
-          # --strip header: omit the "# Changelog" header line — just the section body.
-          git-cliff --config cliff.toml --current --strip header > release-notes.md
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: '${{ github.ref_name }}'
-          body_path: release-notes.md
-          draft: false
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          TAG="${GITHUB_REF_NAME}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "GitHub Release $TAG already exists; nothing to do."
+          else
+            gh release create "$TAG" --verify-tag --generate-notes --title "$TAG"
+          fi
