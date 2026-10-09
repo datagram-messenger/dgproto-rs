@@ -197,16 +197,27 @@ pub struct EncryptedData {
     pub stream_id: u16,
     /// Application-defined message type byte.
     pub app_message_type: u8,
-    /// Raw application payload bytes (TLV-encoded fields).
-    pub fields: Vec<u8>,
+    /// Application-layer TLV fields. Each [`Tlv`] carries a typed payload byte
+    /// (`type_`) and a value. The wire format is the encoded TLV sequence;
+    /// callers work with the decoded slice directly.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// # use dgproto::{EncryptedData, Tlv};
+    /// EncryptedData {
+    ///     stream_id: 1,
+    ///     app_message_type: 0x01,
+    ///     fields: vec![Tlv::new(1, b"hello".as_ref())],
+    /// };
+    /// ```
+    pub fields: Vec<Tlv>,
 }
 
 impl EncryptedData {
     pub(crate) fn marshal_binary(&self) -> Result<Vec<u8>, Error> {
-        // Parse fields as TLVs to validate and check for duplicates.
-        let tlvs = decode_tlvs(&self.fields, MAX_ENCRYPTED_PAYLOAD_SIZE - 4)?;
-        reject_duplicate_tlvs(&tlvs)?;
-        let encoded_fields = encode_tlvs(&tlvs)?;
+        reject_duplicate_tlvs(&self.fields)?;
+        let encoded_fields = encode_tlvs(&self.fields)?;
         if encoded_fields.len() > MAX_ENCRYPTED_PAYLOAD_SIZE - 4 {
             return Err(Error::MessageLength);
         }
@@ -227,10 +238,8 @@ impl EncryptedData {
         }
         let stream_id = u16::from_le_bytes(data[..2].try_into().expect("2 bytes"));
         let app_message_type = data[2];
-        let tlvs = decode_tlvs(&data[4..], MAX_ENCRYPTED_PAYLOAD_SIZE - 4)?;
-        reject_duplicate_tlvs(&tlvs)?;
-        // Re-encode to get canonical fields bytes.
-        let fields = encode_tlvs(&tlvs)?;
+        let fields = decode_tlvs(&data[4..], MAX_ENCRYPTED_PAYLOAD_SIZE - 4)?;
+        reject_duplicate_tlvs(&fields)?;
         Ok(Self {
             stream_id,
             app_message_type,
@@ -450,7 +459,7 @@ fn marshal_text_message(code: u16, text: &str) -> Result<Vec<u8>, Error> {
     let mut buf = Vec::with_capacity(2 + if text.is_empty() { 0 } else { 8 + text.len() });
     buf.extend_from_slice(&code.to_le_bytes());
     if !text.is_empty() {
-        let tlv = Tlv::new(TEXT_TLV_TYPE, text.as_bytes())?;
+        let tlv = Tlv::new(TEXT_TLV_TYPE, text.as_bytes().to_vec());
         buf.extend_from_slice(&tlv.marshal_binary()?);
     }
     Ok(buf)
@@ -472,7 +481,7 @@ fn unmarshal_text_message(data: &[u8]) -> Result<(u16, String), Error> {
     if tlvs.len() != 1 {
         return Err(Error::UnknownMessageTlv);
     }
-    if tlvs[0].typ != TEXT_TLV_TYPE {
+    if tlvs[0].type_ != TEXT_TLV_TYPE {
         return Err(Error::UnknownMessageTlv);
     }
     let text = std::str::from_utf8(&tlvs[0].value)
@@ -485,10 +494,10 @@ fn unmarshal_text_message(data: &[u8]) -> Result<(u16, String), Error> {
 fn reject_duplicate_tlvs(tlvs: &[Tlv]) -> Result<(), Error> {
     let mut seen = [false; 256];
     for t in tlvs {
-        if seen[t.typ as usize] {
+        if seen[t.type_ as usize] {
             return Err(Error::DuplicateMessageTlv);
         }
-        seen[t.typ as usize] = true;
+        seen[t.type_ as usize] = true;
     }
     Ok(())
 }
