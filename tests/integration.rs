@@ -13,7 +13,7 @@
 
 use std::{sync::Arc, time::Duration};
 
-use dgproto::{ClientConfig, Connection, EncryptedData, StaticKey};
+use dgproto::{ClientConfig, Connection, EncryptedData, StaticKey, Tlv};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
@@ -538,19 +538,6 @@ async fn spawn_echo_server(server_private_key: [u8; 32]) -> std::net::SocketAddr
     addr
 }
 
-/// Encode a single TLV field: [type u8][len u16 LE][value][zero-padding to 4-byte boundary].
-fn make_tlv_fields(typ: u8, value: &[u8]) -> Vec<u8> {
-    let len = value.len();
-    let unpadded = 3 + len;
-    let aligned = (unpadded + 3) & !3;
-    let mut buf = vec![0u8; aligned];
-    buf[0] = typ;
-    buf[1] = (len & 0xFF) as u8;
-    buf[2] = ((len >> 8) & 0xFF) as u8;
-    buf[3..3 + len].copy_from_slice(value);
-    buf
-}
-
 /// Generate a random X25519 keypair via snow and return `(private_key, public_key)`.
 fn generate_server_keypair() -> ([u8; 32], [u8; 32]) {
     let kp = snow::Builder::new(NOISE_PARAMS.parse().expect("noise params"))
@@ -593,7 +580,7 @@ async fn test_integration_handshake_and_echo() {
     tokio::time::sleep(Duration::from_millis(10)).await;
 
     // Connect.
-    let received = Arc::new(tokio::sync::Mutex::new(Vec::<Vec<u8>>::new()));
+    let received = Arc::new(tokio::sync::Mutex::new(Vec::<Vec<Tlv>>::new()));
     let received2 = received.clone();
 
     let handler: dgproto::MessageHandler = Arc::new(move |_conn, msg| {
@@ -638,7 +625,7 @@ async fn test_integration_handshake_and_echo() {
     conn.send_and_wait(EncryptedData {
         stream_id: 1,
         app_message_type: 0x01,
-        fields: make_tlv_fields(1, &payload),
+        fields: vec![Tlv::new(1, &payload[..])],
     })
     .await
     .expect("send_and_wait EncryptedData");
@@ -652,7 +639,7 @@ async fn test_integration_handshake_and_echo() {
         {
             let guard = received.lock().await;
             if !guard.is_empty() {
-                let expected_fields = make_tlv_fields(1, &payload);
+                let expected_fields = vec![Tlv::new(1, &payload[..])];
                 assert_eq!(
                     guard[0], expected_fields,
                     "echo payload mismatch: got {:?}, want {:?}",
@@ -703,7 +690,7 @@ async fn test_integration_keepalive_ping_pong() {
     conn.send_and_wait(EncryptedData {
         stream_id: 0,
         app_message_type: 0x00,
-        fields: make_tlv_fields(1, b"ping-pong-ok"),
+        fields: vec![Tlv::new(1, b"ping-pong-ok".as_ref())],
     })
     .await
     .expect("send_and_wait after keepalive cycles");
@@ -765,7 +752,7 @@ async fn test_integration_rekey_transition() {
         conn.send_and_wait(EncryptedData {
             stream_id: 1,
             app_message_type: 0x01,
-            fields: make_tlv_fields(1, format!("frame-{i}").as_bytes()),
+            fields: vec![Tlv::new(1, format!("frame-{i}").into_bytes())],
         })
         .await
         .unwrap_or_else(|e| panic!("send_and_wait frame {i}: {e}"));
@@ -812,7 +799,7 @@ async fn test_integration_abort() {
     let result = conn.send(EncryptedData {
         stream_id: 0,
         app_message_type: 0x00,
-        fields: b"should fail".to_vec(),
+        fields: vec![Tlv::new(1, b"should fail".as_ref())],
     });
     assert!(result.is_err(), "send after abort must return Err, got Ok");
 }
