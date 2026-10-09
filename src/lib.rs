@@ -42,7 +42,7 @@
 //!     conn.send(EncryptedData {
 //!         stream_id: 1,
 //!         app_message_type: 0x01,
-//!         fields: b"hello".to_vec(),
+//!         fields: vec![dgproto::Tlv::new(1, b"hello".as_ref())],
 //!     })?;
 //!     conn.close().await
 //! }
@@ -97,10 +97,13 @@ pub use error::Error;
 pub use handshake::StaticKey;
 
 // Connection and configuration
-pub use connection::{ClientConfig, Connection, MessageHandler};
+pub use connection::{ApplicationMessage, ClientConfig, Connection, MessageHandler};
 
 // Application messages (L4)
 pub use messages::{Ack, CloseCode, EncryptedData, ErrorMessage, SessionClose};
+
+// TLV codec — application-layer field type (exposed to match the Go API surface)
+pub use tlv::Tlv;
 
 // ── Crate-level constants (re-exported for callers that need them) ─────────────
 
