@@ -33,23 +33,32 @@ pub(crate) const MAX_TLV_ELEMENTS: usize = MAX_TLV_SEQUENCE_SIZE / 4;
 /// One application field: a type byte, a value, and no padding (padding is
 /// only present on the wire).
 ///
-/// `value` is owned and does not alias caller input.
+/// `value` is owned and does not alias caller input. Callers may also
+/// construct a `Tlv` directly using struct syntax: `Tlv { type_: 1, value: … }`.
+///
+/// Validation of `value` length (≤ 65535 bytes) is deferred to encoding
+/// via [`encode_tlvs`]. An oversized value is accepted by the constructor
+/// and rejected with [`Error::TlvValueTooLarge`] only when encoding.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tlv {
-    pub typ: u8,
+    /// Field type identifier (application-defined, scoped to message type).
+    pub type_: u8,
+    /// Field value (raw bytes; length must fit in `u16` LE for wire encoding).
     pub value: Vec<u8>,
 }
 
 impl Tlv {
-    /// Construct a `Tlv`, copying `value`.
-    pub(crate) fn new(typ: u8, value: &[u8]) -> Result<Self, Error> {
-        if value.len() > MAX_TLV_VALUE_SIZE {
-            return Err(Error::TlvValueTooLarge);
+    /// Construct a [`Tlv`] from a type byte and any value that converts into
+    /// `Vec<u8>` (e.g. `&[u8]`, `Vec<u8>`, `&str`-as-bytes, …).
+    ///
+    /// This constructor is **infallible**. Value-length validation is deferred
+    /// to encoding; oversized values produce [`Error::TlvValueTooLarge`] only
+    /// when [`encode_tlvs`] or [`Tlv::marshal_binary`] is called.
+    pub fn new(type_: u8, value: impl Into<Vec<u8>>) -> Self {
+        Self {
+            type_,
+            value: value.into(),
         }
-        Ok(Self {
-            typ,
-            value: value.to_vec(),
-        })
     }
 
     /// Encoded wire length including zero-alignment padding to a 4-byte boundary.
@@ -64,7 +73,7 @@ impl Tlv {
     pub(crate) fn marshal_binary(&self) -> Result<Vec<u8>, Error> {
         let n = self.encoded_len()?;
         let mut buf = vec![0u8; n];
-        buf[0] = self.typ;
+        buf[0] = self.type_;
         let len_u16 = self.value.len() as u16;
         buf[1..3].copy_from_slice(&len_u16.to_le_bytes());
         buf[TLV_HEADER_SIZE..TLV_HEADER_SIZE + self.value.len()].copy_from_slice(&self.value);
@@ -140,7 +149,7 @@ pub fn decode_tlvs(data: &[u8], max_bytes: usize) -> Result<Vec<Tlv>, Error> {
         }
 
         let value = data[offset + TLV_HEADER_SIZE..offset + TLV_HEADER_SIZE + value_len].to_vec();
-        out.push(Tlv { typ, value });
+        out.push(Tlv { type_: typ, value });
         offset += unpadded + padding_len;
     }
 
@@ -161,20 +170,20 @@ mod tests {
 
     #[test]
     fn test_tlv_roundtrip_basic() {
-        let t = Tlv::new(1, b"hello").expect("new");
+        let t = Tlv::new(1, b"hello".as_ref());
         let wire = t.marshal_binary().expect("marshal");
         // type(1) + len_u16(2) + value(5) = 8 bytes (aligned to 4: 8)
         assert_eq!(wire.len(), 8);
         let decoded = decode_tlvs(&wire, 0).expect("decode");
         assert_eq!(decoded.len(), 1);
-        assert_eq!(decoded[0].typ, 1);
+        assert_eq!(decoded[0].type_, 1);
         assert_eq!(decoded[0].value, b"hello");
     }
 
     #[test]
     fn test_tlv_alignment_padding() {
         // value length 2 → unpadded = 5 → aligned = 8 (3 padding bytes)
-        let t = Tlv::new(2, b"xy").expect("new");
+        let t = Tlv::new(2, b"xy".as_ref());
         let wire = t.marshal_binary().expect("marshal");
         assert_eq!(wire.len(), 8);
         // wire layout: [type=2][len_lo=2][len_hi=0][x][y][pad][pad][pad]
@@ -186,14 +195,14 @@ mod tests {
     #[test]
     fn test_tlv_alignment_padding_2() {
         // value length 2 → unpadded = 5 → aligned = 8
-        let t = Tlv::new(3, b"ab").expect("new");
+        let t = Tlv::new(3, b"ab".as_ref());
         let wire = t.marshal_binary().expect("marshal");
         assert_eq!(wire.len(), 8);
     }
 
     #[test]
     fn test_tlv_empty_value() {
-        let t = Tlv::new(0, b"").expect("new");
+        let t = Tlv::new(0, vec![]);
         let wire = t.marshal_binary().expect("marshal");
         // type(1) + len(2) + value(0) = 3 → aligned to 4
         assert_eq!(wire.len(), 4);
@@ -204,9 +213,9 @@ mod tests {
     #[test]
     fn test_encode_decode_multiple_tlvs() {
         let tlvs = vec![
-            Tlv::new(1, b"foo").expect("new"),
-            Tlv::new(2, b"bar").expect("new"),
-            Tlv::new(3, b"").expect("new"),
+            Tlv::new(1, b"foo".as_ref()),
+            Tlv::new(2, b"bar".as_ref()),
+            Tlv::new(3, vec![]),
         ];
         let wire = encode_tlvs(&tlvs).expect("encode");
         let decoded = decode_tlvs(&wire, 0).expect("decode");
@@ -232,7 +241,7 @@ mod tests {
 
     #[test]
     fn test_tlv_decode_max_bytes_limit() {
-        let t = Tlv::new(1, b"hello").expect("new");
+        let t = Tlv::new(1, b"hello".as_ref());
         let wire = t.marshal_binary().expect("marshal");
         // Limit to 4 bytes — wire is 8 bytes → should fail.
         assert!(matches!(decode_tlvs(&wire, 4), Err(Error::TlvDecodeLimit)));
@@ -240,16 +249,18 @@ mod tests {
 
     #[test]
     fn test_tlv_value_too_large() {
+        // Tlv::new is infallible; oversized values are rejected at encode time.
         let big = vec![0u8; MAX_TLV_VALUE_SIZE + 1];
-        assert!(matches!(Tlv::new(1, &big), Err(Error::TlvValueTooLarge)));
+        let t = Tlv::new(1, big);
+        assert!(matches!(encode_tlvs(&[t]), Err(Error::TlvValueTooLarge)));
     }
 
     #[test]
     fn test_tlv_unknown_type_preserved() {
-        let t = Tlv::new(0xFF, b"data").expect("new");
+        let t = Tlv::new(0xFF, b"data".as_ref());
         let wire = t.marshal_binary().expect("marshal");
         let decoded = decode_tlvs(&wire, 0).expect("decode");
-        assert_eq!(decoded[0].typ, 0xFF);
+        assert_eq!(decoded[0].type_, 0xFF);
         assert_eq!(decoded[0].value, b"data");
     }
 
