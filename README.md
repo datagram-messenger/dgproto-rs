@@ -34,7 +34,7 @@ The [DGProto v1 specification](https://github.com/datagram-messenger/dgproto-go/
 
 ```toml
 [dependencies]
-dgproto = "0.1"
+dgproto = "0.2"
 tokio   = { version = "1", features = ["full"] }
 ```
 
@@ -45,7 +45,7 @@ Minimum supported Rust version: **1.80**.
 ## Quick start
 
 ```rust
-use dgproto::{ClientConfig, Connection, EncryptedData, StaticKey};
+use dgproto::{ClientConfig, Connection, EncryptedData, StaticKey, Tlv};
 use std::time::Duration;
 
 #[tokio::main]
@@ -65,11 +65,11 @@ async fn main() -> Result<(), dgproto::Error> {
     // Dial the server and complete the three-flight Noise XX handshake.
     let conn = Connection::connect("127.0.0.1:8090", config).await?;
 
-    // Send an application message (enqueued; returns when accepted by the outbound queue).
+    // Send an application message — fields is a typed Vec<Tlv> (matches Go's []TLV).
     conn.send(EncryptedData {
         stream_id:        1,
         app_message_type: 0x01,
-        fields:           b"hello datagram".to_vec(),
+        fields:           vec![Tlv::new(1, b"hello datagram".as_ref())],
     })?;
 
     // Graceful shutdown: sends SessionClose and waits for the peer's reply.
