@@ -36,9 +36,9 @@ pub(crate) const MAX_TLV_ELEMENTS: usize = MAX_TLV_SEQUENCE_SIZE / 4;
 /// `value` is owned and does not alias caller input. Callers may also
 /// construct a `Tlv` directly using struct syntax: `Tlv { type_: 1, value: … }`.
 ///
-/// Validation of `value` length (≤ 65535 bytes) is deferred to encoding
-/// via [`encode_tlvs`]. An oversized value is accepted by the constructor
-/// and rejected with [`Error::TlvValueTooLarge`] only when encoding.
+/// Validation of `value` length (≤ 65535 bytes) is deferred to encoding.
+/// An oversized value is accepted by the constructor and rejected with
+/// [`Error::TlvValueTooLarge`] only when encoding.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tlv {
     /// Field type identifier (application-defined, scoped to message type).
@@ -53,7 +53,7 @@ impl Tlv {
     ///
     /// This constructor is **infallible**. Value-length validation is deferred
     /// to encoding; oversized values produce [`Error::TlvValueTooLarge`] only
-    /// when [`encode_tlvs`] or [`Tlv::marshal_binary`] is called.
+    /// when the value is serialized to wire bytes.
     pub fn new(type_: u8, value: impl Into<Vec<u8>>) -> Self {
         Self {
             type_,
