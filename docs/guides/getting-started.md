@@ -228,7 +228,8 @@ async fn main() -> Result<(), dgproto::Error> {
 | `Error::OutboundQueueFull` | The write loop is behind — `outbound_queue` capacity exceeded. | Increase `outbound_queue` in `ClientConfig`, or use `send_and_wait` for flow control. |
 | `Error::ConnectionClosed` | The connection has already terminated. | Check for terminal errors; reconnect if needed. |
 | `Error::Authentication` | AEAD decryption failed — frame was tampered with or keys are mismatched. | This is a security event; log and close immediately. |
-| `Error::Transport(e)` | Underlying TCP error (disconnected, timeout, etc.). | Reconnect after a backoff delay. |
+| `Error::TransportClosed` | The TCP transport was closed by the peer (clean close at the OS level). | Reconnect after a backoff delay. |
+| `Error::Io(e)` | Raw OS-level I/O error (timeout, connection reset, broken pipe, etc.). | Inspect `e.kind()` to decide whether to retry; reconnect after backoff. |
 
 ---
 
