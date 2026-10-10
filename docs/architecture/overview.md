@@ -1,9 +1,13 @@
-# Architecture
+# Architecture Overview
 
-This document describes the Rust client implementation. The
-[protocol specification](https://github.com/datagram-messenger/dgproto-go/blob/main/docs/protocol/dgproto-v1.md)
-is normative for wire behavior. The Go reference implementation is
-[`dgproto-go`](https://github.com/datagram-messenger/dgproto-go).
+This document describes the internal structure and data flows of the `dgproto` Rust
+client library. It is intended for contributors and callers who need to understand how
+the library works at the module and task level.
+
+The [DGProto v1 specification](https://github.com/datagram-messenger/dgproto-go/blob/main/docs/protocol/dgproto-v1.md)
+is normative for all wire behavior. The Go reference implementation is
+[`dgproto-go`](https://github.com/datagram-messenger/dgproto-go). All modules are
+complete and CI-green; see the [README](../../README.md) for the public API.
 
 ---
 
@@ -200,28 +204,10 @@ Connection (Arc<ConnectionInner>)
 
 ---
 
-## Implementation order
+## See also
 
-Implement modules in this order. Each step depends only on previously
-completed modules.
-
-```
-Step 1:  error.rs          ✅ done — Error enum, all variants
-Step 2:  header.rs         ⬜ Header, Flags, MessageType, marshal/unmarshal
-Step 3:  frame.rs          ⬜ Frame, marshal_binary, unmarshal_binary
-Step 4:  tlv.rs            ⬜ Tlv, encode_tlvs, decode_tlvs
-Step 5:  messages.rs       ⬜ all typed message structs, parse/serialize
-Step 6:  codec.rs          ⬜ Codec, encrypt, decrypt
-Step 7:  replay.rs         ⬜ ReplayWindow, check, commit
-Step 8:  rekey.rs          ⬜ RekeyState, compute_key_confirm, derive_next_key
-Step 9:  handshake.rs      ⬜ StaticKey, HandshakeState, HandshakeSecrets
-Step 10: session.rs        ⬜ Session, encrypt_frame, decrypt_frame, begin/accept_rekey
-Step 11: transport.rs      ⬜ Transport trait, TcpTransport
-Step 12: connection.rs     ⬜ Connection, ClientConfig, connect, send, close, loops
-Step 13: tests/wire_vectors.rs  ⬜ cross-validate all parsers against testdata/vectors/
-Step 14: tests/integration.rs   ⬜ loopback handshake, send, rekey, close
-Step 15: fuzz targets      ⬜ fuzz_header, fuzz_frame, fuzz_tlv, fuzz_messages
-```
-
-After each step: `cargo check`, `cargo clippy -- -D warnings`, unit tests pass.
-After step 13: `cargo test wire_vectors` must pass before any further work.
+- [README](../../README.md) — install, quick start, send/lifecycle API
+- [Getting started guide](../guides/getting-started.md) — step-by-step walkthrough
+- [DGProto v1 specification](https://github.com/datagram-messenger/dgproto-go/blob/main/docs/protocol/dgproto-v1.md) — normative wire spec
+- [dgproto-go](https://github.com/datagram-messenger/dgproto-go) — Go reference implementation and server
+- [API reference (docs.rs)](https://docs.rs/dgproto) — full Rustdoc
