@@ -149,7 +149,11 @@ jobs:
 
       - name: cargo publish
         if: steps.check_published.outputs.already_published == 'false'
-        run: cargo publish --allow-dirty
+        run: |
+          OUTPUT=$(cargo publish --allow-dirty 2>&1) && echo "$OUTPUT" || {
+            echo "$OUTPUT"
+            echo "$OUTPUT" | grep -q "already exists" && exit 0 || exit 1
+          }
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
