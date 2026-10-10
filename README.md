@@ -11,7 +11,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![DGProto v1](https://img.shields.io/badge/protocol-DGProto%20v1-6f42c1)](https://github.com/datagram-messenger/dgproto-go/blob/main/docs/protocol/dgproto-v1.md)
 
-[Install](#install) · [Quick start](#quick-start) · [Key management](#key-management) · [Sending and lifecycle](#sending-and-lifecycle) · [Documentation](#documentation)
+[Install](#install) · [Quick start](#quick-start) · [Getting started](docs/guides/getting-started.md) · [Key management](#key-management) · [Sending and lifecycle](#sending-and-lifecycle) · [Documentation](#documentation)
 
 </div>
 
@@ -78,6 +78,7 @@ async fn main() -> Result<(), dgproto::Error> {
 }
 ```
 
+→ For a step-by-step walkthrough including message handling and key setup, see the **[Getting started guide](docs/guides/getting-started.md)**.<br>
 See the [architecture overview](docs/architecture/overview.md) for connection data flow, concurrency, rekeying, and shutdown behavior.
 
 ---
@@ -92,7 +93,9 @@ let key = StaticKey::generate()?;
 println!("Register this public key on the server:");
 println!("{}", hex::encode(key.public()));
 
-// On subsequent runs, load the saved private key bytes.
+// On subsequent runs, load the saved 32-byte private key.
+// Note: StaticKey::to_private_bytes() for exporting a key is coming in v0.3.0.
+// Until then, manage the raw private bytes with your own storage mechanism.
 let key = StaticKey::load(&private_bytes)?;
 ```
 
