@@ -41,59 +41,31 @@ Register `key.public()` with the server before attempting to connect. How you
 do this is server-specific (e.g. a registration HTTP endpoint, a config file,
 or an admin CLI command in `dgproto-go`).
 
-> **Key persistence (v0.3.0):** `StaticKey::to_private_bytes()` is coming in
-> v0.3.0. Until then, store the raw private bytes via your own mechanism
-> (e.g. `StaticKey::generate()` → pass the 32-byte private key bytes directly
-> to `StaticKey::load(&bytes)` on reload). See the roadmap in `PLAN.md`.
+> **Key persistence:** `StaticKey::to_private_bytes()` is not yet available
+> (coming in v0.3.0). Until then, you are responsible for capturing and storing
+> the raw private bytes by whatever mechanism fits your application. On reload,
+> pass them back with `StaticKey::load(&bytes)`. Never store them in plaintext.
 
 ---
 
-## 3. Connect to the server
+## 3. Connect and handle inbound messages
 
-```rust
-use dgproto::{ClientConfig, Connection};
-use std::time::Duration;
-
-let config = ClientConfig {
-    static_key:        key,
-
-    // Optional: pin the server's static public key.
-    // If None, any server completing a valid Noise XX handshake is accepted.
-    // Always set this in production.
-    server_static_hint: Some(server_public_key_bytes),
-
-    handshake_timeout: Duration::from_secs(10),
-    write_timeout:     Duration::from_secs(10),
-    outbound_queue:    64,
-    ..Default::default()
-};
-
-let conn = Connection::connect("127.0.0.1:8090", config).await?;
-println!("connected — session id: {}", hex::encode(conn.session_id()));
-```
-
-`Connection::connect` dials TCP, completes the three-flight Noise XX handshake,
-derives the session ID and directional keys, then spawns three background tasks
-(read loop, write loop, maintenance loop). On success it returns a `Connection`
-handle that is cheap to `Clone` — all clones share the same underlying session.
-
----
-
-## 4. Receive messages
-
-Set up a `MessageHandler` in `ClientConfig` before connecting. The handler is
-called serially for every inbound `ApplicationMessage`.
+Define the message handler **before** building `ClientConfig` — the handler is
+a field of `ClientConfig` and is passed directly to `Connection::connect`.
 
 ```rust
 use dgproto::{ApplicationMessage, ClientConfig, Connection, MessageHandler};
 use std::sync::Arc;
+use std::time::Duration;
 
-let handler: MessageHandler = Arc::new(move |_conn, msg| {
+// Step 1 — define what to do with incoming messages.
+// The handler is called serially for each ApplicationMessage in arrival order.
+let handler: MessageHandler = Arc::new(|_conn, msg| {
     Box::pin(async move {
         match msg {
             ApplicationMessage::EncryptedData(data) => {
                 println!(
-                    "stream={} type=0x{:02x} fields={}",
+                    "[recv] stream={} type=0x{:02x} fields={}",
                     data.stream_id,
                     data.app_message_type,
                     data.fields.len()
@@ -103,35 +75,49 @@ let handler: MessageHandler = Arc::new(move |_conn, msg| {
                 }
             }
             ApplicationMessage::SessionClose(close) => {
-                println!("server closed: {:?} — {}", close.code, close.reason);
+                println!("[close] {:?}: {}", close.code, close.reason);
             }
             ApplicationMessage::ErrorMessage(err) => {
-                eprintln!("server error 0x{:02x}: {}", err.code, err.reason);
+                eprintln!("[error] 0x{:02x}: {}", err.code, err.reason);
             }
-            ApplicationMessage::Ack(ack) => {
-                println!("ack: {} sequences", ack.sequences.len());
-            }
+            ApplicationMessage::Ack(_) => { /* handle or ignore */ }
         }
         Ok(())
     })
 });
 
+// Step 2 — build the config, passing the handler and all other options.
 let config = ClientConfig {
     static_key: key,
-    handler_queue: 64,
+    handler:    Some(handler),  // ← required to receive messages
+
+    // Pin the server's static public key (strongly recommended in production).
+    // If None, any server completing a valid Noise XX handshake is accepted.
+    server_static_hint: Some(server_public_key_bytes),
+
+    handshake_timeout: Duration::from_secs(10),
+    write_timeout:     Duration::from_secs(10),
+    outbound_queue:    64,
+    handler_queue:     64,
     ..Default::default()
 };
-// Pass the handler at connection time:
-// (handler is a field of ClientConfig — see docs.rs for the full struct)
+
+// Step 3 — connect.
+// Dials TCP, runs the three-flight Noise XX handshake, spawns three
+// background tasks (read loop, write loop, maintenance loop).
+let conn = Connection::connect("127.0.0.1:8090", config).await?;
+println!("connected — session: {}", hex::encode(conn.session_id()));
 ```
 
+`Connection` is `Clone` — all clones share the same underlying session.
+
 > **Note:** the handler runs on the read-loop task. A slow or blocking handler
-> stalls all subsequent inbound messages for that connection. For heavy work,
-> spawn a new task inside the handler.
+> delays subsequent inbound messages on the same connection. For CPU-heavy or
+> I/O-heavy work, spawn a `tokio::task` inside the handler.
 
 ---
 
-## 5. Send messages
+## 4. Send messages
 
 ```rust
 use dgproto::{EncryptedData, Tlv};
@@ -163,7 +149,7 @@ layered on top of DGProto.
 
 ---
 
-## 6. Shut down cleanly
+## 5. Shut down cleanly
 
 ```rust
 // Graceful: sends SessionClose, waits for the peer's reply, tears down tasks.
@@ -178,7 +164,7 @@ After `close()` or `abort()`, all subsequent `send` calls return
 
 ---
 
-## 7. Minimal complete example
+## 6. Minimal complete example
 
 ```rust
 use dgproto::{ApplicationMessage, ClientConfig, Connection, EncryptedData,
@@ -210,6 +196,7 @@ async fn main() -> Result<(), dgproto::Error> {
     // --- Connect ---
     let config = ClientConfig {
         static_key:        key,
+        handler:           Some(handler),
         handler_queue:     64,
         outbound_queue:    64,
         handshake_timeout: Duration::from_secs(10),
@@ -233,7 +220,7 @@ async fn main() -> Result<(), dgproto::Error> {
 
 ---
 
-## 8. Common errors
+## 7. Common errors
 
 | Error | Cause | Fix |
 |---|---|---|
