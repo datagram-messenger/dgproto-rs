@@ -20,7 +20,7 @@ complete and CI-green; see the [README](../../README.md) for the public API.
 | `tlv.rs` | L1 | TLV codec, 4-byte alignment, `encode_tlvs`/`decode_tlvs` |
 | `messages.rs` | L4 | Typed message structs, parse/serialize per spec §5 |
 | `codec.rs` | L2 | Stateless `Codec` (ChaCha20-Poly1305 encrypt/decrypt) |
-| `handshake.rs` | L2 | `StaticKey`, `HandshakeState` (Noise XX initiator), `HandshakeSecrets` |
+| `handshake.rs` | L2 | `StaticKey`, `InitiatorHandshake` (Noise XX initiator), `HandshakeSecrets` |
 | `replay.rs` | L3 | `ReplayWindow` (2048-bit bitmap), `ReplayToken` |
 | `rekey.rs` | L3 | `RekeyState`, key derivation, grace window constants |
 | `session.rs` | L3 | `Session` (directional codec pair, epoch, sequence, replay, rekey) |
@@ -43,7 +43,7 @@ Connection::connect(addr, config)
   │
   ├─ TcpTransport::new(stream)         [transport.rs]
   │
-  ├─ HandshakeState::new(static_key)   [handshake.rs]
+  ├─ InitiatorHandshake::new(&static_key, server_hint?)   [handshake.rs]
   │    │
   │    ├─ write_init()  ──────────────────────────────► server
   │    │    Frame { type=0x01, session_id=0, seq=0 }
@@ -56,7 +56,7 @@ Connection::connect(addr, config)
   │    └─ write_finish() ─────────────────────────────► server
   │         Frame { type=0x03, session_id=0, seq=0 }
   │         payload: noise_msg3 (64 B)
-  │         → HandshakeSecrets { session_id, send_key, receive_key }
+  │         → HandshakeSecrets { session_id, send_key, receive_key, peer_static }
   │
   ├─ Session::new(secrets)             [session.rs]
   │    send:    Codec(send_key),    epoch=1, seq=1
