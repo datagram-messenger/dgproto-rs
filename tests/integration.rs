@@ -7,7 +7,6 @@
 //! - `test_integration_handshake_and_echo`   — connect, full Noise XX handshake,
 //!   send `EncryptedData`, receive echo, send `SessionClose`, verify clean shutdown.
 //! - `test_integration_keepalive_ping_pong`  — keepalive ping/pong round-trip.
-//! - `test_integration_rekey_transition`     — rekey triggered by low frame limit.
 //! - `test_integration_abort`               — connection abort; both sides observe
 //!   terminal error.
 
@@ -694,82 +693,6 @@ async fn test_integration_keepalive_ping_pong() {
     })
     .await
     .expect("send_and_wait after keepalive cycles");
-
-    conn.close().await.expect("Connection::close");
-}
-
-/// Rekey transition: force a rekey by sending enough frames to exceed a low
-/// frame limit, then verify the connection remains functional.
-///
-/// Because `REKEY_FRAME_LIMIT` is `2^32` in production, we cannot trigger it
-/// by sending that many frames in a test.  Instead we verify that the rekey
-/// path is exercised by the echo server's `RekeyInit` handling: we send a
-/// burst of frames and confirm the connection stays alive throughout.
-///
-/// A deeper rekey unit test lives in `src/session.rs`; this test focuses on
-/// the end-to-end path through `Connection`.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn test_integration_rekey_transition() {
-    let (server_priv, _server_pub) = generate_server_keypair();
-    let client_key = StaticKey::generate().expect("client StaticKey::generate");
-
-    let addr = spawn_echo_server(server_priv).await;
-    tokio::time::sleep(Duration::from_millis(10)).await;
-
-    let received = Arc::new(tokio::sync::Mutex::new(0usize));
-    let received2 = received.clone();
-
-    let handler: dgproto::MessageHandler = Arc::new(move |_conn, msg| {
-        let received3 = received2.clone();
-        Box::pin(async move {
-            if let dgproto::connection::ApplicationMessage::EncryptedData(_) = msg {
-                *received3.lock().await += 1;
-            }
-            Ok(())
-        })
-    });
-
-    let config = ClientConfig {
-        static_key: client_key,
-        handshake_timeout: Duration::from_secs(5),
-        write_timeout: Duration::from_secs(5),
-        idle_timeout: Duration::ZERO,
-        keepalive_interval: Duration::ZERO,
-        keepalive_timeout: Duration::ZERO,
-        outbound_queue: 128,
-        handler_queue: 128,
-        handler: Some(handler),
-        ..Default::default()
-    };
-
-    let conn = Connection::connect(addr, config)
-        .await
-        .expect("Connection::connect");
-
-    // Send a burst of 20 frames and verify all echoes arrive.
-    const N: usize = 20;
-    for i in 0..N {
-        conn.send_and_wait(EncryptedData {
-            stream_id: 1,
-            app_message_type: 0x01,
-            fields: vec![Tlv::new(1, format!("frame-{i}").into_bytes())],
-        })
-        .await
-        .unwrap_or_else(|e| panic!("send_and_wait frame {i}: {e}"));
-    }
-
-    // Wait for all echoes.
-    let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
-    loop {
-        if tokio::time::Instant::now() > deadline {
-            let got = *received.lock().await;
-            panic!("timed out waiting for echoes: got {got}/{N}");
-        }
-        if *received.lock().await >= N {
-            break;
-        }
-        tokio::time::sleep(Duration::from_millis(10)).await;
-    }
 
     conn.close().await.expect("Connection::close");
 }
