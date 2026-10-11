@@ -36,7 +36,7 @@
 //! See `docs/architecture/overview.md` for the data-flow diagram.
 
 use std::sync::{
-    atomic::{AtomicBool, AtomicU64, Ordering},
+    atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering},
     Arc, Mutex,
 };
 use std::time::Duration;
@@ -217,6 +217,8 @@ struct ConnectionInner {
     terminal: Mutex<Option<Error>>,
     ping_nonce: AtomicU64,
     closing: AtomicBool,
+    /// Number of task loops still running (starts at 3, decrements to 0).
+    loops_remaining: AtomicU8,
 }
 
 // ── Connection ────────────────────────────────────────────────────────────────
@@ -337,6 +339,7 @@ impl Connection {
             terminal: Mutex::new(None),
             ping_nonce: AtomicU64::new(0),
             closing: AtomicBool::new(false),
+            loops_remaining: AtomicU8::new(3),
         });
 
         let conn = Connection {
@@ -357,18 +360,6 @@ impl Connection {
         {
             let c = conn.clone();
             tokio::spawn(async move { c.run_maintenance_loop(activity_rx, pong_rx).await });
-        }
-        // Notify done when all loops exit — we use a counter approach via a
-        // separate task that waits for the cancel token and then notifies.
-        {
-            let done2 = done.clone();
-            let cancel2 = cancel.clone();
-            tokio::spawn(async move {
-                cancel2.cancelled().await;
-                // Give loops a moment to exit, then notify.
-                tokio::time::sleep(Duration::from_millis(10)).await;
-                done2.notify_waiters();
-            });
         }
 
         Ok(conn)
@@ -522,6 +513,13 @@ impl Connection {
         let _ = self.inner.activity_tx.try_send(());
     }
 
+    fn note_loop_exit(&self) {
+        let prev = self.inner.loops_remaining.fetch_sub(1, Ordering::AcqRel);
+        if prev == 1 {
+            self.inner.done.notify_waiters();
+        }
+    }
+
     // ── Task loops ────────────────────────────────────────────────────────────
 
     async fn run_read_loop(&self) {
@@ -531,16 +529,17 @@ impl Connection {
                 result = self.inner.transport.read_frame(read_timeout) => {
                     match result {
                         Ok(f) => f,
-                        Err(e) => { self.shutdown(e); return; }
+                        Err(e) => { self.shutdown(e); self.note_loop_exit(); return; }
                     }
                 }
-                _ = self.inner.cancel.cancelled() => { return; },
+                _ = self.inner.cancel.cancelled() => { self.note_loop_exit(); return; },
             };
 
             let plaintext = match self.inner.session.decrypt_frame(&frame).await {
                 Ok(p) => p,
                 Err(e) => {
                     self.shutdown(e);
+                    self.note_loop_exit();
                     return;
                 }
             };
@@ -570,12 +569,14 @@ impl Connection {
                         }
                         Err(e) => {
                             self.shutdown(e);
+                            self.note_loop_exit();
                             return;
                         }
                     }
                 }
                 MessageType::SessionClose => {
                     self.shutdown(Error::ConnectionClosed);
+                    self.note_loop_exit();
                     return;
                 }
                 MessageType::RekeyInit => {
@@ -588,6 +589,7 @@ impl Connection {
                             Ok(m) => m,
                             Err(e) => {
                                 self.shutdown(e);
+                                self.note_loop_exit();
                                 return;
                             }
                         };
@@ -596,6 +598,7 @@ impl Connection {
                         };
                         if let Err(e) = (handler)(Arc::new(conn), app_msg).await {
                             self.shutdown(e);
+                            self.note_loop_exit();
                             return;
                         }
                     }
@@ -615,11 +618,12 @@ impl Connection {
                 Some(req) = close_rx.recv() => {
                     let payload = match req.message.marshal_binary() {
                         Ok(p) => p,
-                        Err(e) => { let _ = req.result.send(Err(e)); self.shutdown(req.cause); return; }
+                        Err(e) => { let _ = req.result.send(Err(e)); self.shutdown(req.cause); self.note_loop_exit(); return; }
                     };
                     let result = self.send_internal(MessageType::SessionClose, &payload, 0).await;
                     let _ = req.result.send(result);
                     self.shutdown(req.cause);
+                    self.note_loop_exit();
                     return;
                 }
                 Some(item) = outbound_rx.recv() => {
@@ -628,6 +632,7 @@ impl Connection {
                         Err(e) => {
                             if let Some(tx) = item.completion { let _ = tx.send(Err(Error::ConnectionClosed)); }
                             self.shutdown(e);
+                            self.note_loop_exit();
                             return;
                         }
                     };
@@ -639,11 +644,12 @@ impl Connection {
                         Err(e) => {
                             if let Some(tx) = item.completion { let _ = tx.send(Err(Error::ConnectionClosed)); }
                             self.shutdown(e);
+                            self.note_loop_exit();
                             return;
                         }
                     }
                 }
-                _ = self.inner.cancel.cancelled() => return,
+                _ = self.inner.cancel.cancelled() => { self.note_loop_exit(); return; },
             }
         }
     }
@@ -693,7 +699,7 @@ impl Connection {
             };
 
             tokio::select! {
-                _ = self.inner.cancel.cancelled() => return,
+                _ = self.inner.cancel.cancelled() => { self.note_loop_exit(); return; },
                 _ = activity_rx.recv() => {
                     // Reset idle timer.
                     if let Some(ref mut t) = idle_interval {
@@ -728,10 +734,12 @@ impl Connection {
                 }
                 true = pong_expired => {
                     self.shutdown(Error::KeepaliveTimeout);
+                    self.note_loop_exit();
                     return;
                 }
                 true = idle_tick => {
                     self.shutdown(Error::IdleTimeout);
+                    self.note_loop_exit();
                     return;
                 }
             }
