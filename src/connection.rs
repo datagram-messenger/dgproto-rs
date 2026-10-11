@@ -397,7 +397,10 @@ impl Connection {
                 pad_len,
                 completion: None,
             })
-            .map_err(|_| Error::OutboundQueueFull)
+            .map_err(|e| match e {
+                tokio::sync::mpsc::error::TrySendError::Full(_) => Error::OutboundQueueFull,
+                tokio::sync::mpsc::error::TrySendError::Closed(_) => Error::ConnectionClosed,
+            })
     }
 
     /// Enqueue `msg` and await confirmation that the frame was written to TCP.
