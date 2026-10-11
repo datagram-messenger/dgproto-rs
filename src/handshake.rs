@@ -155,6 +155,30 @@ impl StaticKey {
         Zeroizing::new(self.private)
     }
 
+    /// Return the 64-character lowercase hex-encoded X25519 public key.
+    ///
+    /// Useful for server-side registration, configuration files, and debug
+    /// output. The public key is not secret and may be logged or displayed.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use dgproto::StaticKey;
+    /// let key = StaticKey::generate()?;
+    /// println!("Register this public key with the server: {}", key.public_hex());
+    /// # Ok::<(), dgproto::Error>(())
+    /// ```
+    pub fn public_hex(&self) -> String {
+        const HEX: &[u8] = b"0123456789abcdef";
+        let mut buf = [0u8; 64];
+        for (i, &b) in self.public.iter().enumerate() {
+            buf[i * 2] = HEX[(b >> 4) as usize];
+            buf[i * 2 + 1] = HEX[(b & 0xf) as usize];
+        }
+        // SAFETY: buf contains only ASCII hex characters [0-9a-f].
+        unsafe { String::from_utf8_unchecked(buf.to_vec()) }
+    }
+
     /// Return the private key bytes (used internally by `InitiatorHandshake`).
     ///
     /// Intentionally module-private: the private key must never leave this module.
