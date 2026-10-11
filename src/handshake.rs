@@ -45,7 +45,7 @@
 use sha2::{Digest, Sha256};
 use snow::Builder;
 use subtle::ConstantTimeEq;
-use zeroize::ZeroizeOnDrop;
+use zeroize::{ZeroizeOnDrop, Zeroizing};
 
 use crate::{
     messages::{HandshakeFinish, HandshakeInit, HandshakeResponse},
@@ -128,6 +128,31 @@ impl StaticKey {
     /// Return the 32-byte X25519 public key.
     pub fn public(&self) -> &[u8; 32] {
         &self.public
+    }
+
+    /// Export the raw 32-byte X25519 private key for persistent storage.
+    ///
+    /// Returns a [`Zeroizing`] wrapper that automatically zeroes the bytes when
+    /// dropped. The caller is responsible for:
+    ///
+    /// - Writing the bytes to a file with restrictive permissions
+    ///   (Unix: `0o600`; Windows: restrict via ACL or OS credential store).
+    /// - **Never** logging, printing, or committing the returned bytes.
+    /// - Dropping the returned value as soon as the bytes have been written to
+    ///   their destination — the `Zeroizing` wrapper ensures the stack copy is
+    ///   cleared automatically.
+    ///
+    /// To reload the key on the next startup, pass the stored bytes to
+    /// [`StaticKey::load`].
+    ///
+    /// # Security
+    ///
+    /// The private key is the long-term identity of this client. Exposure of
+    /// these bytes allows an attacker to impersonate this client to any server
+    /// that has registered its public key. Treat it with the same care as a
+    /// TLS private key or a password.
+    pub fn to_private_bytes(&self) -> Zeroizing<[u8; 32]> {
+        Zeroizing::new(self.private)
     }
 
     /// Return the private key bytes (used internally by `InitiatorHandshake`).
