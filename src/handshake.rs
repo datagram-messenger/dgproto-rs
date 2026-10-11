@@ -175,8 +175,8 @@ impl StaticKey {
             buf[i * 2] = HEX[(b >> 4) as usize];
             buf[i * 2 + 1] = HEX[(b & 0xf) as usize];
         }
-        // SAFETY: buf contains only ASCII hex characters [0-9a-f].
-        unsafe { String::from_utf8_unchecked(buf.to_vec()) }
+        // buf contains only ASCII hex characters [0-9a-f], so this is always valid UTF-8.
+        String::from_utf8(buf.to_vec()).expect("hex buffer is always valid UTF-8")
     }
 
     /// Return the private key bytes (used internally by `InitiatorHandshake`).
@@ -195,7 +195,7 @@ impl std::fmt::Debug for StaticKey {
             hex_buf[i * 2] = HEX[(b >> 4) as usize];
             hex_buf[i * 2 + 1] = HEX[(b & 0xf) as usize];
         }
-        let hex_str = std::str::from_utf8(&hex_buf).unwrap_or("?");
+        let hex_str = std::str::from_utf8(&hex_buf).unwrap_or("?"); // infallible: ASCII hex only
         f.debug_struct("StaticKey")
             .field("public", &hex_str)
             .finish_non_exhaustive()
