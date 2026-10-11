@@ -45,7 +45,7 @@
 use sha2::{Digest, Sha256};
 use snow::Builder;
 use subtle::ConstantTimeEq;
-use zeroize::ZeroizeOnDrop;
+use zeroize::{ZeroizeOnDrop, Zeroizing};
 
 use crate::{
     messages::{HandshakeFinish, HandshakeInit, HandshakeResponse},
@@ -128,6 +128,55 @@ impl StaticKey {
     /// Return the 32-byte X25519 public key.
     pub fn public(&self) -> &[u8; 32] {
         &self.public
+    }
+
+    /// Export the raw 32-byte X25519 private key for persistent storage.
+    ///
+    /// Returns a [`Zeroizing`] wrapper that automatically zeroes the bytes when
+    /// dropped. The caller is responsible for:
+    ///
+    /// - Writing the bytes to a file with restrictive permissions
+    ///   (Unix: `0o600`; Windows: restrict via ACL or OS credential store).
+    /// - **Never** logging, printing, or committing the returned bytes.
+    /// - Dropping the returned value as soon as the bytes have been written to
+    ///   their destination — the `Zeroizing` wrapper ensures the stack copy is
+    ///   cleared automatically.
+    ///
+    /// To reload the key on the next startup, pass the stored bytes to
+    /// [`StaticKey::load`].
+    ///
+    /// # Security
+    ///
+    /// The private key is the long-term identity of this client. Exposure of
+    /// these bytes allows an attacker to impersonate this client to any server
+    /// that has registered its public key. Treat it with the same care as a
+    /// TLS private key or a password.
+    pub fn to_private_bytes(&self) -> Zeroizing<[u8; 32]> {
+        Zeroizing::new(self.private)
+    }
+
+    /// Return the 64-character lowercase hex-encoded X25519 public key.
+    ///
+    /// Useful for server-side registration, configuration files, and debug
+    /// output. The public key is not secret and may be logged or displayed.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use dgproto::StaticKey;
+    /// let key = StaticKey::generate()?;
+    /// println!("Register this public key with the server: {}", key.public_hex());
+    /// # Ok::<(), dgproto::Error>(())
+    /// ```
+    pub fn public_hex(&self) -> String {
+        const HEX: &[u8] = b"0123456789abcdef";
+        let mut buf = [0u8; 64];
+        for (i, &b) in self.public.iter().enumerate() {
+            buf[i * 2] = HEX[(b >> 4) as usize];
+            buf[i * 2 + 1] = HEX[(b & 0xf) as usize];
+        }
+        // SAFETY: buf contains only ASCII hex characters [0-9a-f].
+        unsafe { String::from_utf8_unchecked(buf.to_vec()) }
     }
 
     /// Return the private key bytes (used internally by `InitiatorHandshake`).
@@ -533,5 +582,48 @@ mod tests {
         let id2 = derive_session_id(&binding);
         assert_eq!(id1, id2);
         assert_ne!(id1, [0u8; 16]);
+    }
+
+    #[test]
+    fn test_handshake_to_private_bytes_roundtrip() {
+        let original = StaticKey::generate().expect("generate");
+        let private_bytes = original.to_private_bytes();
+        // Reload from the exported bytes.
+        let reloaded = StaticKey::load(&*private_bytes).expect("load");
+        // Public keys must match — same identity.
+        assert_eq!(
+            original.public(),
+            reloaded.public(),
+            "reloaded public key must match original"
+        );
+        // Exported bytes must equal the original private key.
+        assert_eq!(
+            &*private_bytes,
+            reloaded.to_private_bytes().as_ref(),
+            "re-exported private bytes must be identical"
+        );
+    }
+
+    #[test]
+    fn test_handshake_public_hex_length_and_charset() {
+        let key = StaticKey::generate().expect("generate");
+        let hex = key.public_hex();
+        // Must be exactly 64 characters.
+        assert_eq!(hex.len(), 64, "public_hex must be 64 chars");
+        // Every character must be a lowercase hex digit.
+        assert!(
+            hex.chars()
+                .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c)),
+            "public_hex must contain only [0-9a-f], got: {hex}"
+        );
+        // Two calls on the same key must return the same string.
+        assert_eq!(key.public_hex(), hex, "public_hex must be deterministic");
+        // Two different keys must (almost certainly) produce different hex strings.
+        let key2 = StaticKey::generate().expect("generate2");
+        assert_ne!(
+            key.public_hex(),
+            key2.public_hex(),
+            "different keys must produce different hex"
+        );
     }
 }
