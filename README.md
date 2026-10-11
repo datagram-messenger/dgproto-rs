@@ -83,22 +83,32 @@ See [Getting started](docs/guides/getting-started.md) for a full walkthrough inc
 
 ## Key management
 
-The static private key is your cryptographic identity. Generate it once and reuse it across restarts — the server must register your public key before you can connect.
+The static private key is your cryptographic identity. Generate it once, persist
+it securely, and reload it on every subsequent startup — the server must register
+your public key before you can connect.
 
 ```rust
-// Generate once at setup time.
-let key = StaticKey::generate()?;
-println!("Register this public key on the server:");
-println!("{}", hex::encode(key.public()));
+use dgproto::StaticKey;
 
-// On subsequent runs, load from secure storage.
-let key = StaticKey::load(&private_bytes)?;
+// First run: generate and persist.
+let key = StaticKey::generate()?;
+let private_bytes = key.to_private_bytes(); // Zeroizing<[u8; 32]>
+std::fs::write(&key_path, private_bytes.as_ref())?;
+
+// Print the public key for server registration.
+println!("Register this public key: {}", key.public_hex());
+
+// Subsequent runs: load from disk.
+let key = StaticKey::load(&std::fs::read(&key_path)?)?;
 ```
 
 > [!IMPORTANT]
-> Never log, commit, or write the static private key to disk in plaintext.
-> Use OS keychain APIs or caller-managed secure storage.
-> Losing the key requires re-registration with every server you connect to.
+> Never log, commit, or write the static private key to disk without
+> restrictive permissions (Unix: `0o600`). Losing the key requires
+> re-registration with every server you connect to.
+
+See [Key Management Guide](docs/guides/key-management.md) for the full
+persist-and-reload pattern, platform-specific paths, and rotation procedure.
 
 ## Sending and lifecycle
 
