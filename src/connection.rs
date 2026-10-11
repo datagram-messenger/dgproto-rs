@@ -216,8 +216,8 @@ struct ConnectionInner {
     activity_tx: mpsc::Sender<()>,
     /// Capacity-1 channel; read loop forwards pong nonces to maintenance loop.
     pong_tx: mpsc::Sender<u64>,
-    /// Fires when all three task loops have exited.
-    done: Arc<tokio::sync::Notify>,
+    /// Becomes `true` when all three task loops have exited.
+    done: tokio::sync::watch::Sender<bool>,
     cancel: CancellationToken,
     /// First terminal cause (set once, never cleared).
     terminal: Mutex<Option<Error>>,
@@ -328,7 +328,7 @@ impl Connection {
         let (close_tx, close_rx) = mpsc::channel::<CloseRequest>(1);
         let (activity_tx, activity_rx) = mpsc::channel::<()>(1);
         let (pong_tx, pong_rx) = mpsc::channel::<u64>(1);
-        let done = Arc::new(tokio::sync::Notify::new());
+        let (done, _done_rx) = tokio::sync::watch::channel(false);
         let cancel = CancellationToken::new();
 
         let inner = Arc::new(ConnectionInner {
@@ -340,7 +340,7 @@ impl Connection {
             close_tx,
             activity_tx,
             pong_tx,
-            done: done.clone(),
+            done,
             cancel: cancel.clone(),
             terminal: Mutex::new(None),
             ping_nonce: AtomicU64::new(0),
@@ -469,8 +469,12 @@ impl Connection {
         let _ = self.inner.close_tx.send(req).await;
         // Wait for the write loop to process the close.
         let result = rx.await.unwrap_or(Ok(()));
-        // Wait for all loops to exit.
-        self.inner.done.notified().await;
+        // Wait for all loops to exit. A watch channel retains completion even
+        // when the final loop exits before this waiter is registered.
+        let mut done = self.inner.done.subscribe();
+        if !*done.borrow() {
+            done.changed().await.map_err(|_| Error::ConnectionClosed)?;
+        }
         result
     }
 
@@ -525,7 +529,7 @@ impl Connection {
     fn note_loop_exit(&self) {
         let prev = self.inner.loops_remaining.fetch_sub(1, Ordering::AcqRel);
         if prev == 1 {
-            self.inner.done.notify_waiters();
+            self.inner.done.send_replace(true);
         }
     }
 
