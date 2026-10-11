@@ -175,8 +175,8 @@ impl StaticKey {
             buf[i * 2] = HEX[(b >> 4) as usize];
             buf[i * 2 + 1] = HEX[(b & 0xf) as usize];
         }
-        // SAFETY: buf contains only ASCII hex characters [0-9a-f].
-        unsafe { String::from_utf8_unchecked(buf.to_vec()) }
+        // buf contains only ASCII hex characters [0-9a-f], so this is always valid UTF-8.
+        String::from_utf8(buf.to_vec()).expect("hex buffer is always valid UTF-8")
     }
 
     /// Return the private key bytes (used internally by `InitiatorHandshake`).
@@ -195,7 +195,7 @@ impl std::fmt::Debug for StaticKey {
             hex_buf[i * 2] = HEX[(b >> 4) as usize];
             hex_buf[i * 2 + 1] = HEX[(b & 0xf) as usize];
         }
-        let hex_str = std::str::from_utf8(&hex_buf).unwrap_or("?");
+        let hex_str = std::str::from_utf8(&hex_buf).unwrap_or("?"); // infallible: ASCII hex only
         f.debug_struct("StaticKey")
             .field("public", &hex_str)
             .finish_non_exhaustive()
@@ -437,18 +437,16 @@ impl InitiatorHandshake {
 
 /// Derive the X25519 public key from a 32-byte private key.
 ///
-/// Uses the same clamping and scalar multiplication as the X25519 function.
-/// curve25519-dalek is a transitive dependency via snow's default-resolver.
+/// Uses `MontgomeryPoint::mul_base_clamped` which correctly applies X25519
+/// clamping (RFC 7748 §5) and scalar multiplication. `curve25519-dalek` is a
+/// transitive dependency via `snow`'s default-resolver.
 fn derive_x25519_public(private_bytes: &[u8]) -> Vec<u8> {
     use curve25519_dalek::montgomery::MontgomeryPoint;
-    use curve25519_dalek::scalar::Scalar;
-    let mut clamped = [0u8; 32];
-    clamped.copy_from_slice(private_bytes);
-    clamped[0] &= 248;
-    clamped[31] &= 127;
-    clamped[31] |= 64;
-    let scalar = Scalar::from_bytes_mod_order(clamped);
-    let public = MontgomeryPoint::mul_base(&scalar);
+    let mut key_bytes = [0u8; 32];
+    key_bytes.copy_from_slice(private_bytes);
+    // mul_base_clamped applies X25519 clamping (RFC 7748 §5) and performs
+    // the base-point multiplication — correct for X25519 key derivation.
+    let public = MontgomeryPoint::mul_base_clamped(key_bytes);
     public.to_bytes().to_vec()
 }
 
