@@ -583,4 +583,47 @@ mod tests {
         assert_eq!(id1, id2);
         assert_ne!(id1, [0u8; 16]);
     }
+
+    #[test]
+    fn test_handshake_to_private_bytes_roundtrip() {
+        let original = StaticKey::generate().expect("generate");
+        let private_bytes = original.to_private_bytes();
+        // Reload from the exported bytes.
+        let reloaded = StaticKey::load(&*private_bytes).expect("load");
+        // Public keys must match — same identity.
+        assert_eq!(
+            original.public(),
+            reloaded.public(),
+            "reloaded public key must match original"
+        );
+        // Exported bytes must equal the original private key.
+        assert_eq!(
+            &*private_bytes,
+            reloaded.to_private_bytes().as_ref(),
+            "re-exported private bytes must be identical"
+        );
+    }
+
+    #[test]
+    fn test_handshake_public_hex_length_and_charset() {
+        let key = StaticKey::generate().expect("generate");
+        let hex = key.public_hex();
+        // Must be exactly 64 characters.
+        assert_eq!(hex.len(), 64, "public_hex must be 64 chars");
+        // Every character must be a lowercase hex digit.
+        assert!(
+            hex.chars()
+                .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c)),
+            "public_hex must contain only [0-9a-f], got: {hex}"
+        );
+        // Two calls on the same key must return the same string.
+        assert_eq!(key.public_hex(), hex, "public_hex must be deterministic");
+        // Two different keys must (almost certainly) produce different hex strings.
+        let key2 = StaticKey::generate().expect("generate2");
+        assert_ne!(
+            key.public_hex(),
+            key2.public_hex(),
+            "different keys must produce different hex"
+        );
+    }
 }
