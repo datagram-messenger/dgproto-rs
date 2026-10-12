@@ -466,9 +466,14 @@ impl Connection {
             result: tx,
         };
         self.inner.closing.store(true, Ordering::Relaxed);
-        let _ = self.inner.close_tx.send(req).await;
-        // Wait for the write loop to process the close.
-        let result = rx.await.unwrap_or(Ok(()));
+        self.inner
+            .close_tx
+            .send(req)
+            .await
+            .map_err(|_| Error::ConnectionClosed)?;
+        // Wait for the write loop to process the close. A dropped completion
+        // sender means the write loop exited before handling this request.
+        let result = rx.await.map_err(|_| Error::ConnectionClosed)?;
         // Wait for all loops to exit. A watch channel retains completion even
         // when the final loop exits before this waiter is registered.
         let mut done = self.inner.done.subscribe();

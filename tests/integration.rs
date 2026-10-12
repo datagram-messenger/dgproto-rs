@@ -726,3 +726,27 @@ async fn test_integration_abort() {
     });
     assert!(result.is_err(), "send after abort must return Err, got Ok");
 }
+
+/// Closing an already-aborted connection must report failure instead of
+/// silently treating a dropped close request as a successful graceful close.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_integration_close_after_abort_returns_error() {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        let (server_priv, _server_pub) = generate_server_keypair();
+        let client_key = StaticKey::generate().expect("client StaticKey::generate");
+        let addr = spawn_echo_server(server_priv).await;
+        let conn = Connection::connect(addr, loopback_config(client_key))
+            .await
+            .expect("Connection::connect");
+
+        conn.abort();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        assert!(
+            conn.close().await.is_err(),
+            "close after abort must not report a successful graceful close"
+        );
+    })
+    .await
+    .expect("close-after-abort test timed out");
+}
