@@ -117,7 +117,9 @@ Do not copy the normative protocol into this repository. Link to the canonical `
 ## Opening a pull request
 
 The repository provides `.github/pull_request_template.md`. GitHub pre-fills
-the PR body with it when you open a PR through the web UI.
+the PR body with it when you open a PR through the web UI. When opening a PR
+from the command line with `gh`, you must supply the body explicitly — the
+template is **not** applied automatically.
 
 ### Commit convention
 
@@ -136,6 +138,57 @@ Scope is the affected module or layer (e.g. `session`, `replay`, `connection`,
 Breaking changes must include a `BREAKING CHANGE:` footer. Release notes are
 generated automatically from commit history by git-cliff; commits that do not
 follow the convention will be omitted from the changelog.
+
+### Creating a PR with `gh` on Windows
+
+`gh pr create --body "..."` is unreliable on Windows `cmd.exe` and PowerShell:
+multi-line strings are truncated, and non-ASCII characters (em-dash `—`,
+curly quotes, etc.) are silently corrupted by the shell's code-page conversion.
+
+**Always write the PR body to a file and pass it with `--body-file`:**
+
+```sh
+# 1. Write the body to a temporary Markdown file (UTF-8, no BOM).
+#    Fill in the pull_request_template.md sections as appropriate.
+gh pr create \
+  --base main \
+  --head <your-branch> \
+  --title "fix(<scope>): <description>" \
+  --body-file .pr-body.md
+
+# 2. Verify the PR was created correctly.
+gh pr view --json title,body
+
+# 3. Delete the temporary file — do not commit it.
+del .pr-body.md        # Windows
+# rm .pr-body.md       # Unix
+```
+
+**Title rules:**
+- Follow Conventional Commits: `<type>(<scope>): <description>`.
+- Use only ASCII in the title. Avoid em-dashes (`—`), curly quotes, and other
+  non-ASCII punctuation — they corrupt in `cmd.exe` even when the body is fine.
+  Use a plain hyphen-minus (`-`) instead.
+
+**Body rules:**
+- Copy `.github/pull_request_template.md` into `.pr-body.md` and fill it in.
+- Write the file as UTF-8. On Windows, use an editor that saves UTF-8 without
+  BOM (VS Code default, Notepad++ with explicit encoding, etc.).
+- After creating the PR, run `gh pr view --json title,body` and confirm the
+  body is complete and the title contains no garbage characters.
+- Delete `.pr-body.md` before committing. It is listed in `.gitignore` as a
+  precaution, but do not rely on that.
+
+### Updating an existing PR
+
+To fix a title or body after creation:
+
+```sh
+gh pr edit <number> --title "fix(<scope>): <corrected title>"
+gh pr edit <number> --body-file .pr-body.md
+```
+
+Both flags can be combined in one call.
 
 ## Release process
 
