@@ -55,6 +55,12 @@ zeroize = { version = "1", features = ["derive"] }
 # Constant-time comparisons for secret material.
 subtle = "2"
 
+# Cryptographically secure random number generation (OsRng for padding).
+# rand_core is already a transitive dependency via chacha20poly1305 → aead →
+# crypto-common; we declare it directly to make the dependency explicit and
+# to use OsRng in session.rs without relying on transitive re-exports.
+rand_core = { version = "0.6", features = ["getrandom"] }
+
 # X25519 key derivation (transitive dep via snow, but we need it directly for StaticKey::load).
 curve25519-dalek = { version = "4", default-features = false, features = ["alloc"] }
 
