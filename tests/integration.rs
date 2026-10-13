@@ -4,11 +4,17 @@
 //! handshake and echo behaviour) using `tokio::net::TcpListener`.
 //!
 //! Test matrix:
-//! - `test_integration_handshake_and_echo`   — connect, full Noise XX handshake,
+//! - `test_integration_handshake_and_echo`           — connect, full Noise XX handshake,
 //!   send `EncryptedData`, receive echo, send `SessionClose`, verify clean shutdown.
-//! - `test_integration_keepalive_ping_pong`  — keepalive ping/pong round-trip.
-//! - `test_integration_abort`               — connection abort; both sides observe
+//! - `test_integration_keepalive_ping_pong`          — keepalive ping/pong round-trip.
+//! - `test_integration_abort`                        — connection abort; both sides observe
 //!   terminal error.
+//! - `test_integration_wait_for_close_clean_shutdown` — wait_for_close resolves to None
+//!   after a graceful close().
+//! - `test_integration_wait_for_close_on_abort`      — wait_for_close resolves to Some(err)
+//!   after abort().
+//! - `test_integration_on_disconnect_fires_on_error` — on_disconnect callback is invoked
+//!   with Some(err) when the connection is aborted.
 
 use std::{sync::Arc, time::Duration};
 
@@ -749,4 +755,98 @@ async fn test_integration_close_after_abort_returns_error() {
     })
     .await
     .expect("close-after-abort test timed out");
+}
+
+// ── v0.4.0 lifecycle tests ────────────────────────────────────────────────────
+
+/// `wait_for_close` resolves to `None` after a graceful `close()`.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_integration_wait_for_close_clean_shutdown() {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        let (server_priv, _server_pub) = generate_server_keypair();
+        let client_key = StaticKey::generate().expect("client StaticKey::generate");
+        let addr = spawn_echo_server(server_priv).await;
+        let conn = Connection::connect(addr, loopback_config(client_key))
+            .await
+            .expect("Connection::connect");
+
+        // Spawn wait_for_close before calling close so we don't miss the signal.
+        let conn2 = conn.clone();
+        let waiter = tokio::spawn(async move { conn2.wait_for_close().await });
+
+        conn.close().await.expect("graceful close");
+
+        let result = waiter.await.expect("waiter task panicked");
+        assert!(
+            result.is_none(),
+            "wait_for_close after clean close must return None, got {:?}",
+            result
+        );
+    })
+    .await
+    .expect("wait_for_close clean shutdown test timed out");
+}
+
+/// `wait_for_close` resolves to `Some(err)` after `abort()`.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_integration_wait_for_close_on_abort() {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        let (server_priv, _server_pub) = generate_server_keypair();
+        let client_key = StaticKey::generate().expect("client StaticKey::generate");
+        let addr = spawn_echo_server(server_priv).await;
+        let conn = Connection::connect(addr, loopback_config(client_key))
+            .await
+            .expect("Connection::connect");
+
+        let conn2 = conn.clone();
+        let waiter = tokio::spawn(async move { conn2.wait_for_close().await });
+
+        conn.abort();
+
+        let result = waiter.await.expect("waiter task panicked");
+        assert!(
+            result.is_some(),
+            "wait_for_close after abort must return Some(err), got None"
+        );
+    })
+    .await
+    .expect("wait_for_close on abort test timed out");
+}
+
+/// `on_disconnect` callback fires with `Some(err)` when the connection is aborted.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_integration_on_disconnect_fires_on_error() {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        let (server_priv, _server_pub) = generate_server_keypair();
+        let client_key = StaticKey::generate().expect("client StaticKey::generate");
+        let addr = spawn_echo_server(server_priv).await;
+
+        let fired = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let fired2 = fired.clone();
+
+        let mut config = loopback_config(client_key);
+        config.on_disconnect = Some(Arc::new(move |cause| {
+            // Must be called with Some(err) on abort.
+            assert!(
+                cause.is_some(),
+                "on_disconnect must receive Some(err) on abort, got None"
+            );
+            fired2.store(true, std::sync::atomic::Ordering::Release);
+        }));
+
+        let conn = Connection::connect(addr, config)
+            .await
+            .expect("Connection::connect");
+
+        conn.abort();
+        // Wait for all loops to exit so the callback has fired.
+        conn.wait_for_close().await;
+
+        assert!(
+            fired.load(std::sync::atomic::Ordering::Acquire),
+            "on_disconnect callback was not called after abort"
+        );
+    })
+    .await
+    .expect("on_disconnect test timed out");
 }
