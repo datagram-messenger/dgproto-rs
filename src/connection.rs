@@ -33,6 +33,29 @@
 //! Inbound messages are dispatched **serially** per connection (one handler at
 //! a time). A slow handler delays subsequent messages on the same connection.
 //!
+//! # Reconnect pattern
+//!
+//! Use [`Connection::wait_for_close`] to drive a reconnect loop without polling
+//! or relying on send-error detection:
+//!
+//! ```rust,no_run
+//! # use dgproto::{ClientConfig, Connection};
+//! # async fn example(config: ClientConfig) {
+//! loop {
+//!     match Connection::connect("127.0.0.1:8090", config.clone()).await {
+//!         Err(e) => eprintln!("connect failed: {e}"),
+//!         Ok(conn) => {
+//!             if let Some(err) = conn.wait_for_close().await {
+//!                 eprintln!("disconnected: {err}");
+//!             }
+//!             // clean shutdown — reconnect immediately or after a delay
+//!         }
+//!     }
+//!     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+//! }
+//! # }
+//! ```
+//!
 //! See `docs/architecture/overview.md` for the data-flow diagram.
 
 use std::sync::{
@@ -168,10 +191,7 @@ impl std::fmt::Debug for ClientConfig {
                 "handler",
                 &self.handler.as_ref().map(|_| "<MessageHandler>"),
             )
-            .field(
-                "on_connect",
-                &self.on_connect.as_ref().map(|_| "<Fn>"),
-            )
+            .field("on_connect", &self.on_connect.as_ref().map(|_| "<Fn>"))
             .field(
                 "on_disconnect",
                 &self.on_disconnect.as_ref().map(|_| "<Fn>"),

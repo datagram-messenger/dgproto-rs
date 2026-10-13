@@ -379,7 +379,10 @@ impl Clone for Error {
             Self::Io(e) => Self::Io(std::io::Error::from(e.kind())),
             Self::UnsupportedVersion { got } => Self::UnsupportedVersion { got: *got },
             Self::InvalidKeySize { got } => Self::InvalidKeySize { got: *got },
-            Self::InvalidEpoch { got, want } => Self::InvalidEpoch { got: *got, want: *want },
+            Self::InvalidEpoch { got, want } => Self::InvalidEpoch {
+                got: *got,
+                want: *want,
+            },
             // All unit variants — clone by reconstructing.
             Self::HeaderTooShort => Self::HeaderTooShort,
             Self::InvalidMagic => Self::InvalidMagic,

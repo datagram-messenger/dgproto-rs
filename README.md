@@ -38,7 +38,7 @@ This is a **pure library crate** — no binary, no server, no framework. It hand
 
 ```toml
 [dependencies]
-dgproto = "0.3"
+dgproto = "0.4"
 tokio   = { version = "1", features = ["full"] }
 ```
 

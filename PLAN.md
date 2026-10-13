@@ -1,7 +1,7 @@
 # dgproto-rs — Release Roadmap: v0.1.x → v1.0.0
 
-> **Current:** v0.3.3 · **Target:** v1.0.0 — stable, production-ready, developer-friendly  
-> **Active milestones:** v0.3.x (patch) · v0.4.0 (next)  
+> **Current:** v0.4.0 · **Target:** v1.0.0 — stable, production-ready, developer-friendly  
+> **Active milestones:** v0.5.0 (next)  
 > **Reference implementation:** [`dgproto-go`](https://github.com/datagram-messenger/dgproto-go)  
 > **Protocol spec:** `dgproto-go/docs/protocol/dgproto-v1.md` (normative)
 
@@ -27,7 +27,7 @@ v0.2.2 ✅ DONE   — Patch release under v0.2.x milestone
 v0.3.0 ✅ DONE   — Key management: StaticKey persistence + public_hex
 v0.3.3 ✅ DONE   — Patch releases under v0.3.x milestone
 v0.3.4 ✅ DONE   — Security and correctness fixes (see §v0.3.4 below)
-v0.4.0 🔧 ACTIVE — Connection lifecycle: wait_for_close, on_connect/on_disconnect
+v0.4.0 ✅ DONE   — Connection lifecycle: wait_for_close, on_connect/on_disconnect
 v0.5.0           — Documentation: getting-started guide, examples, handler_fn
 v0.6.0           — Security hardening: TOFU docs, property tests, fuzz_session
 v0.7.0           — Performance: criterion benchmarks, hot-path allocation review
@@ -469,26 +469,26 @@ correctness bugs that cannot wait for the next milestone.
 
 **Branch:** `feat/connection-lifecycle`
 
-- [ ] Add `Connection::wait_for_close(&self) -> impl Future<Output = Option<Error>>`  
+- [x] Add `Connection::wait_for_close(&self) -> impl Future<Output = Option<Error>>`  
       Returns when the connection's `CancellationToken` fires. Resolves to `None` on
       clean `SessionClose`, or `Some(err)` on any error termination.  
       Implementation: subscribe to the token, read the stored terminal error.
-- [ ] Add `on_disconnect` field to `ClientConfig`:
+- [x] Add `on_disconnect` field to `ClientConfig`:
   ```rust
   pub on_disconnect: Option<Arc<dyn Fn(Option<Error>) + Send + Sync>>,
   ```
   Invoked by the read loop when the connection terminates.
-- [ ] Add `on_connect` field to `ClientConfig`:
+- [x] Add `on_connect` field to `ClientConfig`:
   ```rust
   pub on_connect: Option<Arc<dyn Fn(Arc<Connection>) + Send + Sync>>,
   ```
   Invoked after the Noise XX handshake completes, before the first message.
-- [ ] Add `Default::default()` values (`None`) for both new fields — no breaking change.
-- [ ] Add integration tests:
+- [x] Add `Default::default()` values (`None`) for both new fields — no breaking change.
+- [x] Add integration tests:
       - `test_integration_wait_for_close_on_abort`
       - `test_integration_wait_for_close_clean_shutdown`
       - `test_integration_on_disconnect_fires_on_error`
-- [ ] Document reconnect pattern using `wait_for_close()` in `connection.rs` module doc.
+- [x] Document reconnect pattern using `wait_for_close()` in `connection.rs` module doc.
 
 **Semver:** Additive (new fields default to `None`).  
 **Touches:** `src/connection.rs`, `tests/integration.rs`.
