@@ -236,7 +236,8 @@ impl EncryptedData {
         if data[3] != 0 {
             return Err(Error::MessageReserved);
         }
-        let stream_id = u16::from_le_bytes(data[..2].try_into().expect("2 bytes"));
+        let stream_id =
+            u16::from_le_bytes(data[..2].try_into().map_err(|_| Error::MessageTooShort)?);
         let app_message_type = data[2];
         let fields = decode_tlvs(&data[4..], MAX_ENCRYPTED_PAYLOAD_SIZE - 4)?;
         reject_duplicate_tlvs(&fields)?;
@@ -274,7 +275,7 @@ impl PingPong {
         if data[0] > 1 {
             return Err(Error::InvalidPingResponse);
         }
-        let nonce = u64::from_le_bytes(data[1..].try_into().expect("8 bytes"));
+        let nonce = u64::from_le_bytes(data[1..].try_into().map_err(|_| Error::MessageTooShort)?);
         Ok(Self {
             is_response: data[0] == 1,
             nonce,
@@ -320,7 +321,7 @@ impl Ack {
             let seq = u64::from_le_bytes(
                 data[1 + 8 * i..1 + 8 * (i + 1)]
                     .try_into()
-                    .expect("8 bytes"),
+                    .map_err(|_| Error::MessageTooShort)?,
             );
             sequences.push(seq);
         }
@@ -354,7 +355,7 @@ impl RekeyInit {
         if data.len() != REKEY_INIT_SIZE {
             return Err(Error::MessageLength);
         }
-        let epoch = u32::from_le_bytes(data[..4].try_into().expect("4 bytes"));
+        let epoch = u32::from_le_bytes(data[..4].try_into().map_err(|_| Error::MessageTooShort)?);
         if epoch == 0 {
             return Err(Error::InvalidEpoch { got: 0, want: 1 });
         }
@@ -475,7 +476,7 @@ fn unmarshal_text_message(data: &[u8]) -> Result<(u16, String), Error> {
     if data.len() < 2 {
         return Err(Error::MessageTooShort);
     }
-    let code = u16::from_le_bytes(data[..2].try_into().expect("2 bytes"));
+    let code = u16::from_le_bytes(data[..2].try_into().map_err(|_| Error::MessageTooShort)?);
     if data.len() == 2 {
         return Ok((code, String::new()));
     }
@@ -807,7 +808,7 @@ mod tests {
     fn test_messages_error_message_code_out_of_range() {
         // Build a raw wire payload with code = 0x0100 (256, out of u8 range).
         let mut wire = vec![0x00u8, 0x01]; // 0x0100 LE = 256
-        // No TLV text field.
+                                           // No TLV text field.
         let result = ErrorMessage::unmarshal_binary(&wire);
         assert!(
             matches!(result, Err(Error::InvalidErrorCode)),
