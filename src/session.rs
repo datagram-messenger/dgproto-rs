@@ -275,9 +275,8 @@ impl Session {
 
         // Normal frame (current or previous epoch).
         if candidate.current {
-            let mut committed = r.replay.clone();
-            committed.commit(candidate.token)?;
-            r.replay = committed;
+            // Commit directly — no clone needed; commit() takes &mut self.
+            r.replay.commit(candidate.token)?;
             if r.previous_codec.is_some() {
                 if r.grace_remaining > 0 {
                     r.grace_remaining -= 1;
@@ -285,9 +284,14 @@ impl Session {
                 expire_grace_locked(&mut r);
             }
         } else {
-            let mut committed = r.previous_replay.clone();
-            committed.commit(candidate.token)?;
-            r.previous_replay = committed;
+            // Previous-epoch frame: commit to the previous replay window and
+            // also decrement grace_remaining so that a flood of previous-epoch
+            // frames cannot hold the grace window open indefinitely.
+            r.previous_replay.commit(candidate.token)?;
+            if r.grace_remaining > 0 {
+                r.grace_remaining -= 1;
+            }
+            expire_grace_locked(&mut r);
         }
         Ok(candidate.plaintext)
     }
