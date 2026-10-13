@@ -172,6 +172,7 @@ dependencies = [
  "curve25519-dalek",
  "hex",
  "hmac",
+ "rand_core",
  "serde",
  "serde_json",
  "sha2",

@@ -29,6 +29,7 @@
 
 use std::time::Instant;
 
+use rand_core::{OsRng, RngCore};
 use subtle::ConstantTimeEq;
 use tokio::sync::Mutex;
 
@@ -274,9 +275,8 @@ impl Session {
 
         // Normal frame (current or previous epoch).
         if candidate.current {
-            let mut committed = r.replay.clone();
-            committed.commit(candidate.token)?;
-            r.replay = committed;
+            // Commit directly — no clone needed; commit() takes &mut self.
+            r.replay.commit(candidate.token)?;
             if r.previous_codec.is_some() {
                 if r.grace_remaining > 0 {
                     r.grace_remaining -= 1;
@@ -284,9 +284,14 @@ impl Session {
                 expire_grace_locked(&mut r);
             }
         } else {
-            let mut committed = r.previous_replay.clone();
-            committed.commit(candidate.token)?;
-            r.previous_replay = committed;
+            // Previous-epoch frame: commit to the previous replay window and
+            // also decrement grace_remaining so that a flood of previous-epoch
+            // frames cannot hold the grace window open indefinitely.
+            r.previous_replay.commit(candidate.token)?;
+            if r.grace_remaining > 0 {
+                r.grace_remaining -= 1;
+            }
+            expire_grace_locked(&mut r);
         }
         Ok(candidate.plaintext)
     }
@@ -327,7 +332,14 @@ fn encrypt_locked(
         return Err(Error::SequenceExhausted);
     }
     let sequence = s.next_sequence;
-    let padding = vec![0u8; pad_len as usize];
+    // Fill padding with cryptographically random bytes so that the cleartext
+    // padding (authenticated as AAD) does not leak plaintext length information.
+    // Zero padding would defeat the purpose of padding as a traffic-analysis
+    // countermeasure.
+    let mut padding = vec![0u8; pad_len as usize];
+    if pad_len > 0 {
+        OsRng.fill_bytes(&mut padding);
+    }
     let frame = s
         .codec
         .encrypt(msg_type, session_id, sequence, plaintext, &padding)?;
@@ -594,5 +606,65 @@ mod tests {
             .await
             .expect_err("should be pending");
         assert!(matches!(err, Error::RekeyPending));
+    }
+
+    /// Regression test: padding bytes must be random, not all-zero.
+    ///
+    /// Encrypts 64 frames with pad_len=16 and asserts that at least one frame
+    /// has non-zero padding. The probability of all 64 frames having all-zero
+    /// 16-byte padding by chance is (1/2^128)^64 — negligible.
+    #[tokio::test]
+    async fn test_session_padding_is_random() {
+        let session = Session::new(make_secrets([0x33u8; 32], [0x44u8; 32])).expect("session");
+        let mut saw_nonzero = false;
+        for _ in 0..64 {
+            let result = session
+                .encrypt_frame(MessageType::EncryptedData, b"x", 16)
+                .await
+                .expect("encrypt");
+            let frame = match result {
+                EncryptResult::Frame(f) => f,
+                EncryptResult::NeedsRekey(_) => panic!("unexpected rekey"),
+            };
+            assert_eq!(frame.padding.len(), 16, "padding length must match pad_len");
+            if frame.padding.iter().any(|&b| b != 0) {
+                saw_nonzero = true;
+                break;
+            }
+        }
+        assert!(
+            saw_nonzero,
+            "all padding bytes were zero across 64 frames — OsRng not used"
+        );
+    }
+
+    /// Regression test: sequence exhaustion returns SequenceExhausted.
+    #[tokio::test]
+    async fn test_session_sequence_exhausted() {
+        let session = Session::new(make_secrets([0x55u8; 32], [0x66u8; 32])).expect("session");
+        // Force next_sequence to u64::MAX so the next encrypt wraps to 0.
+        {
+            let mut s = session.send.lock().await;
+            s.next_sequence = u64::MAX;
+        }
+        // First call at u64::MAX succeeds (sequence = u64::MAX).
+        let result = session
+            .encrypt_frame(MessageType::EncryptedData, b"last", 0)
+            .await
+            .expect("encrypt at u64::MAX should succeed");
+        let frame = match result {
+            EncryptResult::Frame(f) => f,
+            EncryptResult::NeedsRekey(_) => panic!("unexpected rekey"),
+        };
+        assert_eq!(frame.header.sequence, u64::MAX);
+        // Second call: next_sequence is now 0 → SequenceExhausted.
+        let err = session
+            .encrypt_frame(MessageType::EncryptedData, b"overflow", 0)
+            .await
+            .expect_err("should be exhausted");
+        assert!(
+            matches!(err, Error::SequenceExhausted),
+            "expected SequenceExhausted, got {err:?}"
+        );
     }
 }

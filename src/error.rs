@@ -185,6 +185,13 @@ pub enum Error {
     #[error("dgproto: invalid close code")]
     InvalidCloseCode,
 
+    /// An `ErrorMessage` code exceeds the u8 range (0–255) on the wire.
+    ///
+    /// The wire field is u16 LE; values above 255 would be silently truncated
+    /// without this check.
+    #[error("dgproto: error message code out of range (must be 0–255)")]
+    InvalidErrorCode,
+
     /// A handshake payload is not 4-byte aligned.
     ///
     /// Go equivalent: `ErrHandshakeAlignment`
@@ -396,6 +403,7 @@ impl PartialEq for Error {
             (Self::UnknownMessageTlv, Self::UnknownMessageTlv) => true,
             (Self::DuplicateMessageTlv, Self::DuplicateMessageTlv) => true,
             (Self::InvalidCloseCode, Self::InvalidCloseCode) => true,
+            (Self::InvalidErrorCode, Self::InvalidErrorCode) => true,
             (Self::HandshakeAlignment, Self::HandshakeAlignment) => true,
             (Self::InvalidNoisePattern, Self::InvalidNoisePattern) => true,
             (Self::UnexpectedNoiseData, Self::UnexpectedNoiseData) => true,
