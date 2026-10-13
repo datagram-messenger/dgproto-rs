@@ -102,6 +102,27 @@ pub struct ClientConfig {
     /// Optional inbound message handler. If `None`, inbound application
     /// messages are silently discarded.
     pub handler: Option<MessageHandler>,
+
+    /// Optional callback invoked after the Noise XX handshake completes,
+    /// before the first inbound message is dispatched.
+    ///
+    /// Receives an `Arc<Connection>` so the callback can store or use the
+    /// connection immediately. Called synchronously in the connect path —
+    /// keep it non-blocking.
+    ///
+    /// Default: `None`.
+    pub on_connect: Option<Arc<dyn Fn(Arc<Connection>) + Send + Sync>>,
+
+    /// Optional callback invoked when the connection terminates for any reason.
+    ///
+    /// - `None` — clean `SessionClose` from either side.
+    /// - `Some(err)` — error termination (I/O error, authentication failure,
+    ///   keepalive timeout, idle timeout, handler error, etc.).
+    ///
+    /// Called from the last task loop to exit. Keep it non-blocking.
+    ///
+    /// Default: `None`.
+    pub on_disconnect: Option<Arc<dyn Fn(Option<Error>) + Send + Sync>>,
 }
 
 /// Creates a `ClientConfig` with safe defaults.
@@ -124,6 +145,8 @@ impl Default for ClientConfig {
             outbound_queue: 64,
             handler_queue: 64,
             handler: None,
+            on_connect: None,
+            on_disconnect: None,
         }
     }
 }
@@ -144,6 +167,14 @@ impl std::fmt::Debug for ClientConfig {
             .field(
                 "handler",
                 &self.handler.as_ref().map(|_| "<MessageHandler>"),
+            )
+            .field(
+                "on_connect",
+                &self.on_connect.as_ref().map(|_| "<Fn>"),
+            )
+            .field(
+                "on_disconnect",
+                &self.on_disconnect.as_ref().map(|_| "<Fn>"),
             )
             .finish()
     }
@@ -208,7 +239,6 @@ struct QueuedMessage {
 /// A graceful-close request sent to the write loop.
 struct CloseRequest {
     message: SessionClose,
-    cause: Error,
     result: oneshot::Sender<Result<(), Error>>,
 }
 
@@ -376,6 +406,11 @@ impl Connection {
             tokio::spawn(async move { c.run_maintenance_loop(activity_rx, pong_rx).await });
         }
 
+        // Fire on_connect callback after all loops are running.
+        if let Some(ref cb) = conn.inner.config.on_connect {
+            cb(Arc::new(conn.clone()));
+        }
+
         Ok(conn)
     }
 
@@ -470,7 +505,6 @@ impl Connection {
                 code: crate::messages::CloseCode::Normal,
                 reason: String::new(),
             },
-            cause: Error::ConnectionClosed,
             result: tx,
         };
         self.inner.closing.store(true, Ordering::Release);
@@ -492,8 +526,54 @@ impl Connection {
     }
 
     /// Terminate the connection immediately without a close handshake.
+    /// Wait until the connection terminates.
+    ///
+    /// Resolves to:
+    /// - `None` — clean shutdown: `SessionClose` was exchanged by either side,
+    ///   or [`close`](Self::close) completed normally.
+    /// - `Some(err)` — error termination: I/O error, authentication failure,
+    ///   keepalive timeout, idle timeout, handler error, etc.
+    ///
+    /// Returns immediately if the connection is already closed.
+    ///
+    /// # Reconnect pattern
+    ///
+    /// ```rust,no_run
+    /// # use dgproto::{ClientConfig, Connection};
+    /// # async fn example(config: ClientConfig) {
+    /// loop {
+    ///     match Connection::connect("127.0.0.1:8090", config.clone()).await {
+    ///         Err(e) => { eprintln!("connect failed: {e}"); }
+    ///         Ok(conn) => {
+    ///             if let Some(err) = conn.wait_for_close().await {
+    ///                 eprintln!("disconnected: {err}");
+    ///             }
+    ///         }
+    ///     }
+    ///     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    /// }
+    /// # }
+    /// ```
+    pub async fn wait_for_close(&self) -> Option<Error> {
+        // Subscribe before checking the flag to avoid a race where done fires
+        // between the is_closed check and the subscribe call.
+        let mut done_rx = self.inner.done.subscribe();
+        if !*done_rx.borrow() {
+            // Ignore the error: the sender is dropped only after send_replace(true),
+            // so a RecvError here means the channel is already done.
+            let _ = done_rx.changed().await;
+        }
+        // Return a clone of the first terminal cause, if any.
+        self.inner
+            .terminal
+            .lock()
+            .expect("terminal mutex")
+            .as_ref()
+            .map(|e| e.clone())
+    }
+
     pub fn abort(&self) {
-        self.shutdown(Error::ConnectionClosed);
+        self.shutdown(Some(Error::ConnectionClosed));
     }
 
     /// Return the 16-byte session identifier established during the handshake.
@@ -516,12 +596,23 @@ impl Connection {
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 
-    fn shutdown(&self, cause: Error) {
-        // Record the first terminal cause.
+    /// Initiate connection shutdown.
+    ///
+    /// `cause` is `None` for a clean `SessionClose` (both sides exchanged
+    /// close frames), or `Some(err)` for any error termination.
+    /// The first cause wins; subsequent calls are no-ops.
+    fn shutdown(&self, cause: Option<Error>) {
+        // Record the first terminal cause (None = clean close).
         {
             let mut guard = self.inner.terminal.lock().expect("terminal mutex");
             if guard.is_none() {
-                *guard = Some(cause);
+                // Use a sentinel to distinguish "not yet set" from "clean close".
+                // We store Some(ConnectionClosed) only for error paths; clean
+                // close leaves terminal as None.
+                if let Some(err) = cause {
+                    *guard = Some(err);
+                }
+                // If cause is None (clean close), terminal stays None.
             }
         }
         self.inner.closing.store(true, Ordering::Release);
@@ -542,6 +633,18 @@ impl Connection {
     fn note_loop_exit(&self) {
         let prev = self.inner.loops_remaining.fetch_sub(1, Ordering::AcqRel);
         if prev == 1 {
+            // All loops have exited. Fire on_disconnect before signalling done,
+            // so the callback runs before wait_for_close() resolves.
+            if let Some(ref cb) = self.inner.config.on_disconnect {
+                let cause = self
+                    .inner
+                    .terminal
+                    .lock()
+                    .expect("terminal mutex")
+                    .as_ref()
+                    .map(|e| e.clone());
+                cb(cause);
+            }
             self.inner.done.send_replace(true);
         }
     }
@@ -555,7 +658,7 @@ impl Connection {
                 result = self.inner.transport.read_frame(read_timeout) => {
                     match result {
                         Ok(f) => f,
-                        Err(e) => { self.shutdown(e); self.note_loop_exit(); return; }
+                        Err(e) => { self.shutdown(Some(e)); self.note_loop_exit(); return; }
                     }
                 }
                 _ = self.inner.cancel.cancelled() => { self.note_loop_exit(); return; },
@@ -564,7 +667,7 @@ impl Connection {
             let plaintext = match self.inner.session.decrypt_frame(&frame).await {
                 Ok(p) => p,
                 Err(e) => {
-                    self.shutdown(e);
+                    self.shutdown(Some(e));
                     self.note_loop_exit();
                     return;
                 }
@@ -591,7 +694,7 @@ impl Connection {
                                             .await;
                                     }
                                     Err(e) => {
-                                        self.shutdown(e);
+                                        self.shutdown(Some(e));
                                         self.note_loop_exit();
                                         return;
                                     }
@@ -599,14 +702,14 @@ impl Connection {
                             }
                         }
                         Err(e) => {
-                            self.shutdown(e);
+                            self.shutdown(Some(e));
                             self.note_loop_exit();
                             return;
                         }
                     }
                 }
                 MessageType::SessionClose => {
-                    self.shutdown(Error::ConnectionClosed);
+                    self.shutdown(None);
                     self.note_loop_exit();
                     return;
                 }
@@ -619,7 +722,7 @@ impl Connection {
                         let app_msg = match parse_inbound(&frame, &plaintext) {
                             Ok(m) => m,
                             Err(e) => {
-                                self.shutdown(e);
+                                self.shutdown(Some(e));
                                 self.note_loop_exit();
                                 return;
                             }
@@ -628,7 +731,7 @@ impl Connection {
                             inner: self.inner.clone(),
                         };
                         if let Err(e) = (handler)(Arc::new(conn), app_msg).await {
-                            self.shutdown(e);
+                            self.shutdown(Some(e));
                             self.note_loop_exit();
                             return;
                         }
@@ -649,11 +752,11 @@ impl Connection {
                 Some(req) = close_rx.recv() => {
                     let payload = match req.message.marshal_binary() {
                         Ok(p) => p,
-                        Err(e) => { let _ = req.result.send(Err(e)); self.shutdown(req.cause); self.note_loop_exit(); return; }
+                        Err(e) => { let _ = req.result.send(Err(e)); self.shutdown(None); self.note_loop_exit(); return; }
                     };
                     let result = self.send_internal(MessageType::SessionClose, &payload, 0).await;
                     let _ = req.result.send(result);
-                    self.shutdown(req.cause);
+                    self.shutdown(None);
                     self.note_loop_exit();
                     return;
                 }
@@ -662,7 +765,7 @@ impl Connection {
                         Ok(v) => v,
                         Err(e) => {
                             if let Some(tx) = item.completion { let _ = tx.send(Err(Error::ConnectionClosed)); }
-                            self.shutdown(e);
+                            self.shutdown(Some(e));
                             self.note_loop_exit();
                             return;
                         }
@@ -674,7 +777,7 @@ impl Connection {
                         }
                         Err(e) => {
                             if let Some(tx) = item.completion { let _ = tx.send(Err(Error::ConnectionClosed)); }
-                            self.shutdown(e);
+                            self.shutdown(Some(e));
                             self.note_loop_exit();
                             return;
                         }
@@ -764,12 +867,12 @@ impl Connection {
                     }
                 }
                 true = pong_expired => {
-                    self.shutdown(Error::KeepaliveTimeout);
+                    self.shutdown(Some(Error::KeepaliveTimeout));
                     self.note_loop_exit();
                     return;
                 }
                 true = idle_tick => {
-                    self.shutdown(Error::IdleTimeout);
+                    self.shutdown(Some(Error::IdleTimeout));
                     self.note_loop_exit();
                     return;
                 }
