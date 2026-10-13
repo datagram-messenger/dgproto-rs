@@ -132,8 +132,15 @@ impl ReplayWindow {
         for destination in (0..WORD_COUNT).rev() {
             let value = destination.checked_sub(word_shift).map_or(0, |source| {
                 let mut value = self.bitmap[source] << bit_shift;
-                if bit_shift != 0 && source > 0 {
-                    value |= self.bitmap[source - 1] >> (64 - bit_shift);
+                // When bit_shift == 0 the carry term is zero (no cross-word
+                // spill). We must NOT compute `>> (64 - 0)` because a shift
+                // of 64 on a u64 is defined to produce 0 in Rust release
+                // builds but panics in debug builds — use checked_shr to
+                // make the intent explicit and safe in both profiles.
+                if source > 0 {
+                    value |= self.bitmap[source - 1]
+                        .checked_shr(64u32.wrapping_sub(bit_shift))
+                        .unwrap_or(0);
                 }
                 value
             });
@@ -236,5 +243,35 @@ mod tests {
             window.check(u64::MAX - WINDOW_SIZE as u64),
             Err(Error::ReplayTooOld)
         ));
+    }
+
+    /// Regression test: advance() with a word-aligned shift (bit_shift == 0)
+    /// must not panic in debug builds or produce wrong results in release builds.
+    ///
+    /// Previously the carry term used `>> (64 - bit_shift)` which equals
+    /// `>> 64` when bit_shift == 0 — a shift-by-word-size that panics in
+    /// debug mode and wraps to 0 in release mode. The guard `if bit_shift != 0`
+    /// prevented the panic but was fragile. Now we use checked_shr which is
+    /// explicit and safe in both profiles.
+    #[test]
+    fn test_replay_advance_word_aligned_shift() {
+        let mut window = ReplayWindow::new();
+        // Mark sequences 1 and 64 (bit_shift = 0 when advancing by 64).
+        commit(&mut window, 1);
+        commit(&mut window, 64);
+        // Advance by exactly 64 (word-aligned, bit_shift == 0).
+        commit(&mut window, 128);
+        // Sequence 1 is now outside the window (128 - 1 = 127 < WINDOW_SIZE, still in).
+        // Sequence 64 should still be marked as duplicate.
+        assert!(
+            matches!(window.check(64), Err(Error::ReplayDuplicate)),
+            "sequence 64 should still be marked after word-aligned advance"
+        );
+        // Advance far enough to push sequence 1 out.
+        commit(&mut window, 1 + WINDOW_SIZE as u64 + 1);
+        assert!(
+            matches!(window.check(1), Err(Error::ReplayTooOld)),
+            "sequence 1 should be too old after large advance"
+        );
     }
 }

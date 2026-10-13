@@ -74,6 +74,12 @@ pub struct ClientConfig {
     /// Default: 10 seconds.
     pub write_timeout: Duration,
 
+    /// Maximum time allowed for a single frame read to complete.
+    /// A value of `Duration::ZERO` means no read timeout (reads block until
+    /// data arrives or the connection is cancelled).
+    /// Default: 0 (no read timeout; idle_timeout governs inactivity instead).
+    pub read_timeout: Duration,
+
     /// Idle timeout: close the connection if no inbound activity is observed
     /// for this duration. Default: disabled (0 = no timeout).
     pub idle_timeout: Duration,
@@ -111,6 +117,7 @@ impl Default for ClientConfig {
             server_static_hint: None,
             handshake_timeout: Duration::from_secs(10),
             write_timeout: Duration::from_secs(10),
+            read_timeout: Duration::ZERO,
             idle_timeout: Duration::ZERO,
             keepalive_interval: Duration::ZERO,
             keepalive_timeout: Duration::ZERO,
@@ -128,6 +135,7 @@ impl std::fmt::Debug for ClientConfig {
             .field("server_static_hint", &self.server_static_hint)
             .field("handshake_timeout", &self.handshake_timeout)
             .field("write_timeout", &self.write_timeout)
+            .field("read_timeout", &self.read_timeout)
             .field("idle_timeout", &self.idle_timeout)
             .field("keepalive_interval", &self.keepalive_interval)
             .field("keepalive_timeout", &self.keepalive_timeout)
@@ -387,7 +395,7 @@ impl Connection {
         msg: impl Into<ApplicationMessage>,
         pad_len: u8,
     ) -> Result<(), Error> {
-        if self.inner.closing.load(Ordering::Relaxed) {
+        if self.inner.closing.load(Ordering::Acquire) {
             return Err(Error::ConnectionClosed);
         }
         self.inner
@@ -408,7 +416,7 @@ impl Connection {
     /// Success means the frame was written locally — not acknowledged by the
     /// peer or processed by the application.
     pub async fn send_and_wait(&self, msg: impl Into<ApplicationMessage>) -> Result<(), Error> {
-        if self.inner.closing.load(Ordering::Relaxed) {
+        if self.inner.closing.load(Ordering::Acquire) {
             return Err(Error::ConnectionClosed);
         }
         let (tx, rx) = oneshot::channel();
@@ -438,7 +446,7 @@ impl Connection {
         msg: impl Into<ApplicationMessage>,
         pad_len: u8,
     ) -> Result<(), Error> {
-        if self.inner.closing.load(Ordering::Relaxed) {
+        if self.inner.closing.load(Ordering::Acquire) {
             return Err(Error::ConnectionClosed);
         }
         let (tx, rx) = oneshot::channel();
@@ -465,7 +473,7 @@ impl Connection {
             cause: Error::ConnectionClosed,
             result: tx,
         };
-        self.inner.closing.store(true, Ordering::Relaxed);
+        self.inner.closing.store(true, Ordering::Release);
         self.inner
             .close_tx
             .send(req)
@@ -503,7 +511,7 @@ impl Connection {
     /// Once this returns `true` all subsequent [`send`](Self::send) calls will
     /// return [`Error::ConnectionClosed`].
     pub fn is_closed(&self) -> bool {
-        self.inner.closing.load(Ordering::Relaxed)
+        self.inner.closing.load(Ordering::Acquire)
     }
 
     // ── Internal helpers ──────────────────────────────────────────────────────
@@ -516,7 +524,7 @@ impl Connection {
                 *guard = Some(cause);
             }
         }
-        self.inner.closing.store(true, Ordering::Relaxed);
+        self.inner.closing.store(true, Ordering::Release);
         self.inner.cancel.cancel();
         // Session and transport close are best-effort.
         let session = self.inner.session.clone();
@@ -542,7 +550,7 @@ impl Connection {
 
     async fn run_read_loop(&self) {
         loop {
-            let read_timeout = self.inner.config.write_timeout; // reuse write_timeout for reads
+            let read_timeout = self.inner.config.read_timeout;
             let frame = tokio::select! {
                 result = self.inner.transport.read_frame(read_timeout) => {
                     match result {
@@ -576,13 +584,18 @@ impl Connection {
                                     is_response: true,
                                     nonce: ping.nonce,
                                 };
-                                let _ = self
-                                    .send_internal(
-                                        MessageType::PingPong,
-                                        &pong.marshal_binary().unwrap_or_default(),
-                                        0,
-                                    )
-                                    .await;
+                                match pong.marshal_binary() {
+                                    Ok(payload) => {
+                                        let _ = self
+                                            .send_internal(MessageType::PingPong, &payload, 0)
+                                            .await;
+                                    }
+                                    Err(e) => {
+                                        self.shutdown(e);
+                                        self.note_loop_exit();
+                                        return;
+                                    }
+                                }
                             }
                         }
                         Err(e) => {
