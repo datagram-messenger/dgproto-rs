@@ -411,6 +411,11 @@ impl ErrorMessage {
 
     pub fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
         let (code_u16, text) = unmarshal_text_message(data)?;
+        // Reject wire codes that do not fit in u8 to prevent silent truncation.
+        // The wire field is u16 LE; valid error codes are 0–255.
+        if code_u16 > u8::MAX as u16 {
+            return Err(Error::InvalidErrorCode);
+        }
         Ok(Self {
             code: code_u16 as u8,
             reason: text,
@@ -792,6 +797,29 @@ mod tests {
         assert_eq!(wire.len(), 2);
         let m2 = ErrorMessage::unmarshal_binary(&wire).expect("unmarshal");
         assert_eq!(m, m2);
+    }
+
+    /// Regression test: ErrorMessage with wire code > 255 must be rejected.
+    ///
+    /// Previously `code_u16 as u8` silently truncated the value, e.g.
+    /// wire code 0x0101 would be parsed as code 0x01 without error.
+    #[test]
+    fn test_messages_error_message_code_out_of_range() {
+        // Build a raw wire payload with code = 0x0100 (256, out of u8 range).
+        let mut wire = vec![0x00u8, 0x01]; // 0x0100 LE = 256
+        // No TLV text field.
+        let result = ErrorMessage::unmarshal_binary(&wire);
+        assert!(
+            matches!(result, Err(Error::InvalidErrorCode)),
+            "expected InvalidErrorCode for wire code 256, got {result:?}"
+        );
+
+        // Boundary: code = 255 (0xFF 0x00 LE) must be accepted.
+        wire[0] = 0xFF;
+        wire[1] = 0x00;
+        let ok = ErrorMessage::unmarshal_binary(&wire);
+        assert!(ok.is_ok(), "code 255 should be valid, got {ok:?}");
+        assert_eq!(ok.unwrap().code, 255);
     }
 
     // ── EncryptedData ─────────────────────────────────────────────────────────
