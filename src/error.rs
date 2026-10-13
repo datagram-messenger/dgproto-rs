@@ -373,6 +373,74 @@ pub enum Error {
     Io(#[from] std::io::Error),
 }
 
+impl Clone for Error {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Io(e) => Self::Io(std::io::Error::from(e.kind())),
+            Self::UnsupportedVersion { got } => Self::UnsupportedVersion { got: *got },
+            Self::InvalidKeySize { got } => Self::InvalidKeySize { got: *got },
+            Self::InvalidEpoch { got, want } => Self::InvalidEpoch {
+                got: *got,
+                want: *want,
+            },
+            // All unit variants — clone by reconstructing.
+            Self::HeaderTooShort => Self::HeaderTooShort,
+            Self::InvalidMagic => Self::InvalidMagic,
+            Self::ReservedFlags => Self::ReservedFlags,
+            Self::PaddingFlag => Self::PaddingFlag,
+            Self::FrameTooShort => Self::FrameTooShort,
+            Self::FrameTooLarge => Self::FrameTooLarge,
+            Self::FrameLengthMismatch => Self::FrameLengthMismatch,
+            Self::PayloadTooLarge => Self::PayloadTooLarge,
+            Self::TagLength => Self::TagLength,
+            Self::PaddingLength => Self::PaddingLength,
+            Self::TlvTooShort => Self::TlvTooShort,
+            Self::TlvTruncated => Self::TlvTruncated,
+            Self::TlvValueTooLarge => Self::TlvValueTooLarge,
+            Self::TlvDecodeLimit => Self::TlvDecodeLimit,
+            Self::TlvSequenceLimit => Self::TlvSequenceLimit,
+            Self::TlvElementLimit => Self::TlvElementLimit,
+            Self::MessageTooShort => Self::MessageTooShort,
+            Self::MessageLength => Self::MessageLength,
+            Self::MessageReserved => Self::MessageReserved,
+            Self::MessageType => Self::MessageType,
+            Self::AckCount => Self::AckCount,
+            Self::InvalidUtf8 => Self::InvalidUtf8,
+            Self::ReasonTooLong => Self::ReasonTooLong,
+            Self::UnknownMessageTlv => Self::UnknownMessageTlv,
+            Self::DuplicateMessageTlv => Self::DuplicateMessageTlv,
+            Self::InvalidCloseCode => Self::InvalidCloseCode,
+            Self::InvalidErrorCode => Self::InvalidErrorCode,
+            Self::HandshakeAlignment => Self::HandshakeAlignment,
+            Self::InvalidNoisePattern => Self::InvalidNoisePattern,
+            Self::UnexpectedNoiseData => Self::UnexpectedNoiseData,
+            Self::InvalidPingResponse => Self::InvalidPingResponse,
+            Self::Authentication => Self::Authentication,
+            Self::InvalidSequence => Self::InvalidSequence,
+            Self::InvalidSessionId => Self::InvalidSessionId,
+            Self::Handshake => Self::Handshake,
+            Self::InvalidStaticKey => Self::InvalidStaticKey,
+            Self::ReplayZero => Self::ReplayZero,
+            Self::ReplayDuplicate => Self::ReplayDuplicate,
+            Self::ReplayTooOld => Self::ReplayTooOld,
+            Self::ReplayStale => Self::ReplayStale,
+            Self::SessionClosed => Self::SessionClosed,
+            Self::WrongSession => Self::WrongSession,
+            Self::SequenceExhausted => Self::SequenceExhausted,
+            Self::RekeyPending => Self::RekeyPending,
+            Self::EpochExhausted => Self::EpochExhausted,
+            Self::KeyConfirmFailed => Self::KeyConfirmFailed,
+            Self::TransportFrameTooShort => Self::TransportFrameTooShort,
+            Self::TransportFrameTooLarge => Self::TransportFrameTooLarge,
+            Self::TransportClosed => Self::TransportClosed,
+            Self::ConnectionClosed => Self::ConnectionClosed,
+            Self::IdleTimeout => Self::IdleTimeout,
+            Self::KeepaliveTimeout => Self::KeepaliveTimeout,
+            Self::OutboundQueueFull => Self::OutboundQueueFull,
+        }
+    }
+}
+
 impl PartialEq for Error {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
