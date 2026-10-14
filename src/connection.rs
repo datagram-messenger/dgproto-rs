@@ -772,11 +772,24 @@ impl Connection {
                 Some(req) = close_rx.recv() => {
                     let payload = match req.message.marshal_binary() {
                         Ok(p) => p,
-                        Err(e) => { let _ = req.result.send(Err(e)); self.shutdown(None); self.note_loop_exit(); return; }
+                        Err(e) => {
+                            let _ = req.result.send(Err(e.clone()));
+                            self.shutdown(Some(e));
+                            self.note_loop_exit();
+                            return;
+                        }
                     };
                     let result = self.send_internal(MessageType::SessionClose, &payload, 0).await;
-                    let _ = req.result.send(result);
-                    self.shutdown(None);
+                    match result {
+                        Ok(()) => {
+                            let _ = req.result.send(Ok(()));
+                            self.shutdown(None);
+                        }
+                        Err(e) => {
+                            let _ = req.result.send(Err(e.clone()));
+                            self.shutdown(Some(e));
+                        }
+                    }
                     self.note_loop_exit();
                     return;
                 }
