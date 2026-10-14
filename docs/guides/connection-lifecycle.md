@@ -24,8 +24,8 @@ There are two ways to end a connection:
 
 | Method | What it does | When to use |
 |--------|-------------|-------------|
-| `conn.close().await` | Sends `SessionClose`, waits for the peer's reply, then tears down all tasks. Returns `Ok(())` on clean exchange, `Err(e)` if the write failed. | Normal application shutdown. |
-| `conn.abort()` | Cancels all tasks immediately without a close handshake. Fire-and-forget — returns before tasks have fully exited. | Unrecoverable errors, timeouts, or when you cannot wait for the peer. |
+| `conn.close().await` | Writes `SessionClose` to the local TCP socket, starts teardown, and normally waits for lifecycle completion. It does not wait for a peer reply. Returns `Err(e)` if the local write or completion fails. | Normal application shutdown. |
+| `conn.abort()` | Cancels all tasks immediately without a close handshake. Fire-and-forget — returns before lifecycle completion. | Unrecoverable errors, timeouts, or when you cannot wait for teardown. |
 
 ```rust,no_run
 // Graceful — preferred when the connection is healthy.
@@ -40,20 +40,26 @@ conn.wait_for_close().await;
 After either call, all subsequent `send` calls return `Err(Error::ConnectionClosed)`.
 
 > [!NOTE]
-> `close()` internally calls `abort()` after the `SessionClose` exchange
-> completes, so you do not need to call both.
+> When `close()` is called from this connection's inbound handler, it returns
+> after the local `SessionClose` write instead of waiting on the read loop that
+> is running that handler. Teardown continues in the background; call
+> `wait_for_close()` from another task if you need to observe completion.
 
 ---
 
 ## Waiting for termination
 
-`wait_for_close()` blocks until all three background tasks (read loop, write
-loop, maintenance loop) have exited. It returns the **terminal cause**:
+`wait_for_close()` blocks until the read, write, and maintenance loops plus the
+session/transport teardown task have completed. It returns the retained
+**first terminal outcome**:
 
-- `None` — clean shutdown: `SessionClose` was exchanged by either side, or
-  `close()` completed normally.
-- `Some(err)` — error termination: I/O error, authentication failure,
-  keepalive timeout, idle timeout, handler error, etc.
+- `None` — the first terminal outcome was clean: a peer `SessionClose` was
+  received, or the local `SessionClose` write completed normally.
+- `Some(err)` — the first terminal outcome was an error: I/O error,
+  authentication failure, keepalive timeout, idle timeout, handler error, etc.
+
+A later shutdown path cannot replace that first outcome, including replacing a
+clean outcome with an error or clearing an earlier error.
 
 ```rust,no_run
 let cause = conn.wait_for_close().await;
@@ -153,8 +159,10 @@ let config = ClientConfig {
 
 ### `on_disconnect`
 
-Called when the connection terminates for any reason, after all background
-tasks have exited. Receives the same terminal cause as `wait_for_close()`.
+Called when the connection terminates for any reason, after the runtime loops
+and session/transport teardown have completed. Receives the same retained first
+terminal outcome as `wait_for_close()`. A panic in this callback is contained so
+it cannot prevent lifecycle completion from being published.
 
 ```rust,no_run
 use dgproto::{ClientConfig, Error};
@@ -174,7 +182,8 @@ let config = ClientConfig {
 
 > [!IMPORTANT]
 > `on_disconnect` fires **before** `wait_for_close()` resolves. If you use
-> both, the callback always runs first.
+> both, the callback always runs first. If `on_connect` panics, the fully started
+> runtime is shut down before that panic resumes to the `connect()` caller.
 
 ---
 

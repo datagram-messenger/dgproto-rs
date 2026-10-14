@@ -21,7 +21,7 @@ provisioning, authorization, reconnect policy, and message semantics.
 > [!IMPORTANT]
 > **Compatibility status**
 >
-> - **Crate:** `dgproto` 0.4.1
+> - **Crate:** `dgproto` 0.4.2
 > - **Protocol:** DGProto v1 **draft**, Implementation Track
 > - The crate version and protocol version are independent.
 > - The wire specification may still change while the protocol remains a draft.
@@ -57,7 +57,7 @@ baseline:
 
 ```toml
 [dependencies]
-dgproto = "0.4.1"
+dgproto = "0.4.2"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
@@ -118,17 +118,19 @@ registration, inbound handlers, and operational setup.
 
 | Operation | Semantics |
 |---|---|
-| `Connection::connect` | Dials TCP, completes the Noise XX handshake, then starts read, write, and maintenance tasks. |
+| `Connection::connect` | Validates the configuration, dials TCP, completes the Noise XX handshake, then starts read, write, and maintenance tasks. `outbound_queue: 0` returns `Error::InvalidOutboundQueueCapacity`. |
 | `send` | Non-blocking bounded enqueue; fails if the queue is full or the connection is closing. |
-| `send_and_wait` | Waits until the write loop reports that the frame was written to the TCP socket. It is not a peer acknowledgment. |
-| `wait_for_close` | Waits for all connection tasks and returns the retained first terminal cause, if any. |
-| `close` | Initiates a `SessionClose` exchange and waits for connection tasks to stop. |
-| `abort` | Cancels immediately without a close handshake; task termination can be observed with `wait_for_close`. |
+| `send_and_wait` | Waits until the serialized writer reports that the frame was written to the local TCP socket. It is not a peer acknowledgment. |
+| `wait_for_close` | Waits for the runtime loops and teardown task, then returns the retained first terminal outcome. |
+| `close` | Writes a local `SessionClose`, starts teardown, and normally waits for lifecycle completion. It does not wait for a peer reply. When called from this connection's inbound handler, it returns after the close write so the handler can finish and teardown can complete. |
+| `abort` | Cancels immediately without a close handshake; lifecycle completion can be observed with `wait_for_close`. |
 
-`Connection` is a cheap clone backed by shared state and is `Send + Sync`.
-Inbound handlers run serially for each connection, so a slow handler delays
-later inbound messages. After closing begins, subsequent sends fail with
-`Error::ConnectionClosed`.
+Application writes, keepalive/control writes, and rekey write/commit/retry are
+serialized in one outbound critical section. `Connection` is a cheap clone backed
+by shared state and is `Send + Sync`. Inbound handlers run serially for each
+connection, so a slow handler delays later inbound messages. After closing begins,
+subsequent sends fail with `Error::ConnectionClosed`. The first clean or error
+terminal outcome wins and cannot be overwritten by a later shutdown path.
 
 ## Protocol and security model
 

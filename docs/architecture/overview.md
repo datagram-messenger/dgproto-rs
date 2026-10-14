@@ -54,8 +54,8 @@ Connection::connect(addr, config)
   │    │    payload: server_ephemeral (32 B) || noise_msg2 (64 B)
   │    │
   │    └─ write_finish() ─────────────────────────────► server
-  │         Frame { type=0x03, session_id=0, seq=0 }
-  │         payload: noise_msg3 (64 B)
+  │         HandshakeResponse frame { type=0x02, session_id=0, seq=0 }
+  │         HandshakeFinish payload: noise_msg3 (64 B)
   │         → HandshakeSecrets { session_id, send_key, receive_key, peer_static }
   │
   ├─ Session::new(secrets)             [session.rs]
@@ -95,8 +95,9 @@ write_loop (tokio task)
   │    │    ciphertext = ChaCha20Poly1305::encrypt(nonce, plaintext, aad)
   │    └─ release send_mutex → Frame
   │
-  └─ TcpTransport::write_frame(frame)                       [transport.rs]
-       write all bytes to TcpStream (with write_timeout)
+  └─ writer mutex serializes sequence allocation, rekey frame write/commit/retry,
+       and TcpTransport::write_frame(frame) (with write_timeout) against every
+       application, close, keepalive, and read-loop control write
 ```
 
 ---
@@ -190,9 +191,10 @@ Connection (Arc<ConnectionInner>)
   ├─ pong_tx:   mpsc::channel<u64>(1)    ← read_loop forwards pong nonces
   │
   ├─ cancel: CancellationToken   ← abort() / close() / terminal error
-  ├─ terminal: Mutex<Option<Error>>   ← first-wins terminal cause
-  ├─ loops_remaining: AtomicU8(3)     ← decrements to 0 as tasks exit
-  ├─ done: watch::Sender<bool>        ← fires true when loops_remaining == 0
+  ├─ writer: AsyncMutex<()>      ← serializes every encrypted write and rekey
+  ├─ terminal: Mutex<TerminalState>   ← first clean/error outcome wins
+  ├─ loops_remaining: AtomicU8(4)     ← three loops plus teardown task
+  ├─ done: watch::Sender<bool>        ← fires after callback and all four exits
   │
   ├─ Task: read_loop
   │    reads frames → decrypts → dispatches handler (serial)
@@ -202,7 +204,7 @@ Connection (Arc<ConnectionInner>)
   │
   ├─ Task: write_loop
   │    drains outbound channel → encrypts → writes TCP
-  │    handles close_tx requests (SessionClose exchange)
+  │    handles close_tx requests (local SessionClose write; no peer reply wait)
   │    on error → shutdown(Some(e)), note_loop_exit()
   │
   └─ Task: maintenance_loop
@@ -232,15 +234,16 @@ Connection (Arc<ConnectionInner>)
                     └───────────────────────────────────────────────────────┘
 
 shutdown(cause):
-  1. terminal.lock(): if None → store cause (first-wins; None = clean close)
+  1. terminal.lock(): store only if Unset (first clean/error outcome wins)
   2. closing.store(true, Release)
   3. cancel.cancel()
-  4. spawn: session.close() + transport.close()  (best-effort)
+  4. exactly once, spawn teardown: session.close() + transport.close()
+  5. teardown calls note_loop_exit() after both operations return
 
 note_loop_exit():
   loops_remaining.fetch_sub(1)
-  if prev == 1 (last loop):
-    → fire on_disconnect(terminal.clone())
+  if prev == 1 (three loops and teardown have completed):
+    → fire on_disconnect(terminal.cause()); contain callback panic
     → done.send_replace(true)        ← unblocks wait_for_close()
 ```
 

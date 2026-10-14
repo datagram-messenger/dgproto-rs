@@ -111,6 +111,8 @@ let config = ClientConfig {
 
     handshake_timeout: Duration::from_secs(10),
     write_timeout:     Duration::from_secs(10),
+    // Must be greater than zero; zero returns
+    // Error::InvalidOutboundQueueCapacity before dialing.
     outbound_queue:    64,
     handler_queue:     64,
     ..Default::default()
@@ -166,7 +168,8 @@ layered on top of DGProto.
 ## 5. Shut down cleanly
 
 ```rust
-// Graceful: sends SessionClose, waits for the peer's reply, tears down tasks.
+// Graceful: writes SessionClose locally and waits for teardown.
+// It does not wait for a peer reply.
 conn.close().await?;
 
 // Immediate: aborts without a close handshake. Use on unrecoverable errors.
