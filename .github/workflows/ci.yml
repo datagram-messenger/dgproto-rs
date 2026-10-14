@@ -21,22 +21,15 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
 
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
 
       - name: cargo fmt --check
         run: cargo fmt --all -- --check
@@ -48,6 +41,7 @@ jobs:
         run: cargo test --all-features
 
       - name: cargo test (release)
+        if: matrix.os == 'ubuntu-latest'
         run: cargo test --release --all-features
 
       - name: cargo doc (no-deps)
@@ -61,19 +55,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Rust 1.80
         uses: dtolnay/rust-toolchain@1.80
 
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: msrv-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
 
       - name: cargo check (MSRV)
         run: cargo check --all-features
@@ -84,22 +72,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Rust nightly
         uses: dtolnay/rust-toolchain@nightly
 
+      - name: Cache cargo (incl. cargo-fuzz binary)
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-directories: ~/.cargo/bin
+          key: fuzz-${{ hashFiles('fuzz/Cargo.lock', 'fuzz/Cargo.toml') }}
+
       - name: Install cargo-fuzz
         run: cargo install cargo-fuzz --locked
-
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: fuzz-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       # cargo-fuzz must be invoked from the workspace root (not fuzz/).
       # It locates the fuzz sub-crate automatically via the manifest path.

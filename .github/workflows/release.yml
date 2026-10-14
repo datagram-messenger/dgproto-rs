@@ -5,9 +5,13 @@ name: Release
 # the pattern v<major>.<minor>.<patch> (e.g. v0.1.0, v1.2.3).
 #
 # What this workflow does:
-#   1. Runs the full CI suite (same gates as ci.yml) to guard against a bad tag.
+#   1. Verifies Cargo.toml version matches the tag.
 #   2. Publishes the crate to crates.io.
-#   3. Creates a GitHub Release with the changelog section for this version.
+#   3. Creates a GitHub Release with auto-generated notes.
+#
+# CI (fmt, clippy, tests, MSRV) is intentionally NOT re-run here — tags are
+# only pushed from main which has already passed ci.yml. Re-running CI on the
+# tag wastes ~3–4 minutes for no additional safety.
 
 on:
   push:
@@ -22,81 +26,13 @@ permissions:
   contents: write   # needed to create the GitHub Release
 
 jobs:
-  # ── 1. Full CI gate ──────────────────────────────────────────────────────────
-  # Re-run the same checks as ci.yml so a bad tag cannot slip through.
-  ci:
-    name: CI gate (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: true
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
-
-      - name: cargo fmt --check
-        run: cargo fmt --all -- --check
-
-      - name: cargo clippy -D warnings
-        run: cargo clippy --all-targets -- -D warnings
-
-      - name: cargo test (dev)
-        run: cargo test --all-features
-
-      - name: cargo test (release)
-        run: cargo test --release --all-features
-
-      - name: cargo doc (no-deps)
-        run: cargo doc --all-features --no-deps
-        env:
-          RUSTDOCFLAGS: '-D warnings'
-
-  # ── 2. MSRV check ────────────────────────────────────────────────────────────
-  msrv:
-    name: MSRV (Rust 1.80)
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust 1.80
-        uses: dtolnay/rust-toolchain@1.80
-
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: msrv-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: cargo check (MSRV)
-        run: cargo check --all-features
-
-  # ── 3. Verify Cargo.toml version matches the tag ─────────────────────────────
+  # ── 1. Verify Cargo.toml version matches the tag ─────────────────────────────
   verify-version:
     name: Verify version
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Check Cargo.toml version matches tag
         shell: bash
@@ -111,26 +47,21 @@ jobs:
             exit 1
           fi
 
-  # ── 4. Publish to crates.io ──────────────────────────────────────────────────
+  # ── 2. Publish to crates.io ──────────────────────────────────────────────────
   publish:
     name: Publish to crates.io
     runs-on: ubuntu-latest
-    needs: [ci, msrv, verify-version]
-    environment: crates-io   # optional: gate behind a GitHub environment for approval
+    needs: [verify-version]
+    environment: crates-io
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: publish-cargo-${{ hashFiles('**/Cargo.toml') }}
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
 
       - name: Check if version already published
         id: check_published
@@ -157,16 +88,16 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
-  # ── 5. Create GitHub Release ─────────────────────────────────────────────────
+  # ── 3. Create GitHub Release ─────────────────────────────────────────────────
   github-release:
     name: GitHub Release
     runs-on: ubuntu-latest
-    needs: [ci, msrv, verify-version]
+    needs: [verify-version]
     permissions:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: refs/tags/${{ github.ref_name }}
           persist-credentials: false
