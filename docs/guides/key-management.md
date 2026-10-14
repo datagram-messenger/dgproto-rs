@@ -151,3 +151,12 @@ Key rotation requires coordination with the server:
 **Do not replace the key file before the server has registered the new key.**
 The client will be unable to connect during the window between file replacement
 and server registration.
+
+---
+
+## See also
+
+- [Getting started](getting-started.md) — connect, send, and receive basics
+- [Connection lifecycle](connection-lifecycle.md) — reconnect patterns, keepalive, and idle timeout
+- [Architecture overview](../architecture/overview.md) — module structure and data flow diagrams
+- [API reference (docs.rs)](https://docs.rs/dgproto) — full Rustdoc for `StaticKey`

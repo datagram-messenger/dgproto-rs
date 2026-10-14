@@ -169,6 +169,8 @@ cargo +1.80 test
 | Document | Description |
 |----------|-------------|
 | [Getting started](docs/guides/getting-started.md) | Full walkthrough: key setup, connecting, sending, handling messages |
+| [Connection lifecycle](docs/guides/connection-lifecycle.md) | Reconnect patterns, keepalive, idle timeout, lifecycle callbacks |
+| [Key management](docs/guides/key-management.md) | Persist, load, and rotate your static identity key |
 | [Architecture](docs/architecture/overview.md) | Connection data flow, concurrency model, rekeying, shutdown |
 | [Protocol specification](https://github.com/datagram-messenger/dgproto-go/blob/main/docs/protocol/dgproto-v1.md) | Normative wire format (lives in `dgproto-go`) |
 | [API reference](https://docs.rs/dgproto) | Generated docs on docs.rs |
