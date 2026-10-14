@@ -102,25 +102,32 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          cat > pr-body.md <<EOF
+          ## Release v$VERSION
+
+          This PR was opened automatically by the **Release prep** workflow.
+
+          ### Checklist
+
+          - [ ] Review the version bump in \`Cargo.toml\`.
+          - [ ] Ensure all CI checks pass.
+          - [ ] Merge this PR (squash or rebase — no merge commits).
+          - [ ] After merge, push the release tag:
+
+            \`\`\`bash
+            git checkout main && git pull
+            git tag v$VERSION
+            git push origin v$VERSION
+            \`\`\`
+
+          The tag push triggers \`release.yml\`, which publishes to crates.io
+          and creates the GitHub Release with auto-generated release notes.
+          EOF
+
           gh pr create \
             --head "$BRANCH" \
             --base main \
             --title "chore(release): prepare v$VERSION" \
-            --body "## Release v$VERSION
-
-This PR was opened automatically by the **Release prep** workflow.
-
-### Checklist
-
-- [ ] Review the version bump in \`Cargo.toml\`.
-- [ ] Ensure all CI checks pass.
-- [ ] Merge this PR (squash or rebase — no merge commits).
-- [ ] After merge, push the release tag:
-      \`\`\`
-      git checkout main && git pull
-      git tag v$VERSION
-      git push origin v$VERSION
-      \`\`\`
-      The tag push triggers \`release.yml\`, which runs CI, publishes to crates.io,
-      and creates the GitHub Release with auto-generated release notes." \
+            --body-file pr-body.md \
             --no-maintainer-edit
+          rm -f pr-body.md
