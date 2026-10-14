@@ -545,8 +545,7 @@ impl Connection {
         result
     }
 
-    /// Terminate the connection immediately without a close handshake.
-    /// Wait until the connection terminates.
+    /// Wait until the connection terminates and return the terminal cause.
     ///
     /// Resolves to:
     /// - `None` — clean shutdown: `SessionClose` was exchanged by either side,
@@ -592,6 +591,13 @@ impl Connection {
             .map(|e| e.clone())
     }
 
+    /// Terminate the connection immediately without a close handshake.
+    ///
+    /// Cancels all I/O and session tasks. Fire-and-forget — returns before
+    /// the loops have fully exited. To wait for teardown, call
+    /// [`wait_for_close`](Self::wait_for_close) afterwards.
+    ///
+    /// Subsequent [`send`](Self::send) calls return [`Error::ConnectionClosed`].
     pub fn abort(&self) {
         self.shutdown(Some(Error::ConnectionClosed));
     }
