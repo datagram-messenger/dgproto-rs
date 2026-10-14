@@ -361,6 +361,10 @@ pub enum Error {
     #[error("dgproto: keepalive timeout")]
     KeepaliveTimeout,
 
+    /// The outbound queue capacity is zero.
+    #[error("dgproto: outbound queue capacity must be greater than zero")]
+    InvalidOutboundQueueCapacity,
+
     /// The outbound queue is full; the non-blocking send was rejected.
     ///
     /// Go equivalent: `ErrOutboundQueueFull`
@@ -436,6 +440,7 @@ impl Clone for Error {
             Self::ConnectionClosed => Self::ConnectionClosed,
             Self::IdleTimeout => Self::IdleTimeout,
             Self::KeepaliveTimeout => Self::KeepaliveTimeout,
+            Self::InvalidOutboundQueueCapacity => Self::InvalidOutboundQueueCapacity,
             Self::OutboundQueueFull => Self::OutboundQueueFull,
         }
     }
@@ -502,6 +507,7 @@ impl PartialEq for Error {
             (Self::ConnectionClosed, Self::ConnectionClosed) => true,
             (Self::IdleTimeout, Self::IdleTimeout) => true,
             (Self::KeepaliveTimeout, Self::KeepaliveTimeout) => true,
+            (Self::InvalidOutboundQueueCapacity, Self::InvalidOutboundQueueCapacity) => true,
             (Self::OutboundQueueFull, Self::OutboundQueueFull) => true,
             // Two I/O errors are equal when their kinds match.
             (Self::Io(a), Self::Io(b)) => a.kind() == b.kind(),

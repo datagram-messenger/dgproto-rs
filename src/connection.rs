@@ -58,13 +58,14 @@
 //!
 //! See `docs/architecture/overview.md` for the data-flow diagram.
 
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{
     atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering},
     Arc, Mutex,
 };
 use std::time::Duration;
 
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{mpsc, oneshot, Mutex as AsyncMutex};
 use tokio_util::sync::CancellationToken;
 
 use crate::{
@@ -265,6 +266,56 @@ struct CloseRequest {
     result: oneshot::Sender<Result<(), Error>>,
 }
 
+#[derive(Debug)]
+enum TerminalState {
+    Unset,
+    Clean,
+    Error(Error),
+}
+
+impl TerminalState {
+    fn set_once(&mut self, cause: Option<Error>) {
+        if matches!(self, Self::Unset) {
+            *self = match cause {
+                Some(error) => Self::Error(error),
+                None => Self::Clean,
+            };
+        }
+    }
+
+    fn cause(&self) -> Option<Error> {
+        match self {
+            Self::Error(error) => Some(error.clone()),
+            Self::Unset | Self::Clean => None,
+        }
+    }
+}
+
+// Marks an inline read-loop handler so Connection::close can avoid waiting
+// for that same loop to exit.
+tokio::task_local! {
+    static HANDLER_CONNECTION: usize;
+}
+
+struct LoopExitGuard {
+    conn: Connection,
+}
+
+impl LoopExitGuard {
+    fn new(conn: Connection) -> Self {
+        Self { conn }
+    }
+}
+
+impl Drop for LoopExitGuard {
+    fn drop(&mut self) {
+        if std::thread::panicking() {
+            self.conn.shutdown(Some(Error::ConnectionClosed));
+        }
+        self.conn.note_loop_exit();
+    }
+}
+
 /// Shared connection state, owned by an `Arc`.
 struct ConnectionInner {
     transport: Arc<TcpTransport>,
@@ -280,12 +331,16 @@ struct ConnectionInner {
     /// Becomes `true` when all three task loops have exited.
     done: tokio::sync::watch::Sender<bool>,
     cancel: CancellationToken,
-    /// First terminal cause (set once, never cleared).
-    terminal: Mutex<Option<Error>>,
+    /// Serializes sequence allocation, transport write, and rekey commit/retry.
+    writer: AsyncMutex<()>,
+    /// First terminal outcome (set once, never cleared).
+    terminal: Mutex<TerminalState>,
     ping_nonce: AtomicU64,
     closing: AtomicBool,
-    /// Number of task loops still running (starts at 3, decrements to 0).
+    /// Number of lifecycle tasks still running (three loops plus teardown).
     loops_remaining: AtomicU8,
+    /// Ensures session/transport teardown is spawned exactly once.
+    teardown_started: AtomicBool,
 }
 
 // ── Connection ────────────────────────────────────────────────────────────────
@@ -313,6 +368,7 @@ impl Connection {
         addr: impl tokio::net::ToSocketAddrs,
         config: ClientConfig,
     ) -> Result<Self, Error> {
+        validate_config(&config)?;
         let handshake_timeout = config.handshake_timeout;
         let conn = tokio::time::timeout(handshake_timeout, Self::do_connect(addr, config))
             .await
@@ -357,16 +413,14 @@ impl Connection {
 
         // Flight 2: receive HandshakeResponse.
         let resp_frame = transport.read_frame(Duration::ZERO).await?;
-        if resp_frame.header.msg_type != MessageType::HandshakeResponse {
-            return Err(Error::Handshake);
-        }
+        validate_handshake_response_envelope(&resp_frame)?;
         hs.read_response(&resp_frame.payload)?;
 
         // Flight 3: send HandshakeFinish.
         let (finish_payload, secrets) = hs.write_finish()?;
         let finish_frame = Frame {
             header: Header::new(
-                MessageType::EncryptedData, // 0x03 — HandshakeFinish shares wire type with EncryptedData (zero session ID)
+                MessageType::HandshakeResponse,
                 [0u8; 16],
                 0,
                 finish_payload.len() as u32,
@@ -403,10 +457,12 @@ impl Connection {
             pong_tx,
             done,
             cancel: cancel.clone(),
-            terminal: Mutex::new(None),
+            writer: AsyncMutex::new(()),
+            terminal: Mutex::new(TerminalState::Unset),
             ping_nonce: AtomicU64::new(0),
             closing: AtomicBool::new(false),
-            loops_remaining: AtomicU8::new(3),
+            loops_remaining: AtomicU8::new(4),
+            teardown_started: AtomicBool::new(false),
         });
 
         let conn = Connection {
@@ -429,9 +485,19 @@ impl Connection {
             tokio::spawn(async move { c.run_maintenance_loop(activity_rx, pong_rx).await });
         }
 
-        // Fire on_connect callback after all loops are running.
+        // Fire on_connect after all loops are running, preserving the documented
+        // ordering. A callback panic rolls the fully-started runtime back before
+        // resuming the panic to the caller.
         if let Some(ref cb) = conn.inner.config.on_connect {
-            cb(Arc::new(conn.clone()));
+            if let Err(panic) = catch_unwind(AssertUnwindSafe(|| cb(Arc::new(conn.clone())))) {
+                conn.shutdown(Some(Error::ConnectionClosed));
+                let _ = tokio::time::timeout(
+                    conn.inner.config.handshake_timeout,
+                    conn.wait_for_close(),
+                )
+                .await;
+                std::panic::resume_unwind(panic);
+            }
         }
 
         Ok(conn)
@@ -539,11 +605,17 @@ impl Connection {
         // Wait for the write loop to process the close. A dropped completion
         // sender means the write loop exited before handling this request.
         let result = rx.await.map_err(|_| Error::ConnectionClosed)?;
-        // Wait for all loops to exit. A watch channel retains completion even
-        // when the final loop exits before this waiter is registered.
-        let mut done = self.inner.done.subscribe();
-        if !*done.borrow() {
-            done.changed().await.map_err(|_| Error::ConnectionClosed)?;
+        // A handler runs inline in the read loop. Waiting for global completion
+        // from that same task would deadlock, so return after the write loop has
+        // completed the close handshake; teardown continues in the background.
+        let in_own_handler = HANDLER_CONNECTION
+            .try_with(|id| *id == Arc::as_ptr(&self.inner) as usize)
+            .unwrap_or(false);
+        if !in_own_handler {
+            let mut done = self.inner.done.subscribe();
+            if !*done.borrow() {
+                done.changed().await.map_err(|_| Error::ConnectionClosed)?;
+            }
         }
         result
     }
@@ -586,12 +658,7 @@ impl Connection {
             let _ = done_rx.changed().await;
         }
         // Return a clone of the first terminal cause, if any.
-        self.inner
-            .terminal
-            .lock()
-            .expect("terminal mutex")
-            .as_ref()
-            .map(|e| e.clone())
+        self.inner.terminal.lock().expect("terminal mutex").cause()
     }
 
     /// Terminate the connection immediately without a close handshake.
@@ -631,28 +698,21 @@ impl Connection {
     /// close frames), or `Some(err)` for any error termination.
     /// The first cause wins; subsequent calls are no-ops.
     fn shutdown(&self, cause: Option<Error>) {
-        // Record the first terminal cause (None = clean close).
-        {
-            let mut guard = self.inner.terminal.lock().expect("terminal mutex");
-            if guard.is_none() {
-                // Use a sentinel to distinguish "not yet set" from "clean close".
-                // We store Some(ConnectionClosed) only for error paths; clean
-                // close leaves terminal as None.
-                if let Some(err) = cause {
-                    *guard = Some(err);
-                }
-                // If cause is None (clean close), terminal stays None.
-            }
-        }
+        self.inner
+            .terminal
+            .lock()
+            .expect("terminal mutex")
+            .set_once(cause);
         self.inner.closing.store(true, Ordering::Release);
         self.inner.cancel.cancel();
-        // Session and transport close are best-effort.
-        let session = self.inner.session.clone();
-        let transport = self.inner.transport.clone();
-        tokio::spawn(async move {
-            session.close().await;
-            let _ = transport.close().await;
-        });
+        if !self.inner.teardown_started.swap(true, Ordering::AcqRel) {
+            let conn = self.clone();
+            tokio::spawn(async move {
+                conn.inner.session.close().await;
+                let _ = conn.inner.transport.close().await;
+                conn.note_loop_exit();
+            });
+        }
     }
 
     fn note_activity(&self) {
@@ -662,17 +722,11 @@ impl Connection {
     fn note_loop_exit(&self) {
         let prev = self.inner.loops_remaining.fetch_sub(1, Ordering::AcqRel);
         if prev == 1 {
-            // All loops have exited. Fire on_disconnect before signalling done,
-            // so the callback runs before wait_for_close() resolves.
+            // All loops and teardown have exited. Keep the documented callback
+            // ordering, but never let user panic suppress completion publication.
             if let Some(ref cb) = self.inner.config.on_disconnect {
-                let cause = self
-                    .inner
-                    .terminal
-                    .lock()
-                    .expect("terminal mutex")
-                    .as_ref()
-                    .map(|e| e.clone());
-                cb(cause);
+                let cause = self.inner.terminal.lock().expect("terminal mutex").cause();
+                let _ = catch_unwind(AssertUnwindSafe(|| cb(cause)));
             }
             self.inner.done.send_replace(true);
         }
@@ -681,23 +735,23 @@ impl Connection {
     // ── Task loops ────────────────────────────────────────────────────────────
 
     async fn run_read_loop(&self) {
+        let _exit = LoopExitGuard::new(self.clone());
         loop {
             let read_timeout = self.inner.config.read_timeout;
             let frame = tokio::select! {
                 result = self.inner.transport.read_frame(read_timeout) => {
                     match result {
                         Ok(f) => f,
-                        Err(e) => { self.shutdown(Some(e)); self.note_loop_exit(); return; }
+                        Err(e) => { self.shutdown(Some(e)); return; }
                     }
                 }
-                _ = self.inner.cancel.cancelled() => { self.note_loop_exit(); return; },
+                _ = self.inner.cancel.cancelled() => { return; },
             };
 
             let plaintext = match self.inner.session.decrypt_frame(&frame).await {
                 Ok(p) => p,
                 Err(e) => {
                     self.shutdown(Some(e));
-                    self.note_loop_exit();
                     return;
                 }
             };
@@ -718,13 +772,16 @@ impl Connection {
                                 };
                                 match pong.marshal_binary() {
                                     Ok(payload) => {
-                                        let _ = self
+                                        if let Err(e) = self
                                             .send_internal(MessageType::PingPong, &payload, 0)
-                                            .await;
+                                            .await
+                                        {
+                                            self.shutdown(Some(e));
+                                            return;
+                                        }
                                     }
                                     Err(e) => {
                                         self.shutdown(Some(e));
-                                        self.note_loop_exit();
                                         return;
                                     }
                                 }
@@ -732,14 +789,12 @@ impl Connection {
                         }
                         Err(e) => {
                             self.shutdown(Some(e));
-                            self.note_loop_exit();
                             return;
                         }
                     }
                 }
                 MessageType::SessionClose => {
                     self.shutdown(None);
-                    self.note_loop_exit();
                     return;
                 }
                 MessageType::RekeyInit => {
@@ -752,16 +807,20 @@ impl Connection {
                             Ok(m) => m,
                             Err(e) => {
                                 self.shutdown(Some(e));
-                                self.note_loop_exit();
                                 return;
                             }
                         };
                         let conn = Connection {
                             inner: self.inner.clone(),
                         };
-                        if let Err(e) = (handler)(Arc::new(conn), app_msg).await {
+                        let handler_result = HANDLER_CONNECTION
+                            .scope(
+                                Arc::as_ptr(&self.inner) as usize,
+                                (handler)(Arc::new(conn), app_msg),
+                            )
+                            .await;
+                        if let Err(e) = handler_result {
                             self.shutdown(Some(e));
-                            self.note_loop_exit();
                             return;
                         }
                     }
@@ -775,6 +834,7 @@ impl Connection {
         mut outbound_rx: mpsc::Receiver<QueuedMessage>,
         mut close_rx: mpsc::Receiver<CloseRequest>,
     ) {
+        let _exit = LoopExitGuard::new(self.clone());
         loop {
             tokio::select! {
                 // Prioritize close requests.
@@ -784,7 +844,6 @@ impl Connection {
                         Err(e) => {
                             let _ = req.result.send(Err(e.clone()));
                             self.shutdown(Some(e));
-                            self.note_loop_exit();
                             return;
                         }
                     };
@@ -799,7 +858,6 @@ impl Connection {
                             self.shutdown(Some(e));
                         }
                     }
-                    self.note_loop_exit();
                     return;
                 }
                 Some(item) = outbound_rx.recv() => {
@@ -808,7 +866,6 @@ impl Connection {
                         Err(e) => {
                             if let Some(tx) = item.completion { let _ = tx.send(Err(Error::ConnectionClosed)); }
                             self.shutdown(Some(e));
-                            self.note_loop_exit();
                             return;
                         }
                     };
@@ -820,12 +877,11 @@ impl Connection {
                         Err(e) => {
                             if let Some(tx) = item.completion { let _ = tx.send(Err(Error::ConnectionClosed)); }
                             self.shutdown(Some(e));
-                            self.note_loop_exit();
                             return;
                         }
                     }
                 }
-                _ = self.inner.cancel.cancelled() => { self.note_loop_exit(); return; },
+                _ = self.inner.cancel.cancelled() => { return; },
             }
         }
     }
@@ -835,6 +891,7 @@ impl Connection {
         mut activity_rx: mpsc::Receiver<()>,
         mut pong_rx: mpsc::Receiver<u64>,
     ) {
+        let _exit = LoopExitGuard::new(self.clone());
         let mut idle_interval = if self.inner.config.idle_timeout.is_zero() {
             None
         } else {
@@ -877,7 +934,7 @@ impl Connection {
             };
 
             tokio::select! {
-                _ = self.inner.cancel.cancelled() => { self.note_loop_exit(); return; },
+                _ = self.inner.cancel.cancelled() => { return; },
                 _ = activity_rx.recv() => {
                     // Reset idle timer.
                     if let Some(ref mut t) = idle_interval {
@@ -899,8 +956,16 @@ impl Connection {
                         let nonce = self.inner.ping_nonce.fetch_add(1, Ordering::Relaxed) + 1;
                         outstanding_nonce = nonce;
                         let ping = PingPong { is_response: false, nonce };
-                        if let Ok(payload) = ping.marshal_binary() {
-                            let _ = self.send_internal(MessageType::PingPong, &payload, 0).await;
+                        let payload = match ping.marshal_binary() {
+                            Ok(payload) => payload,
+                            Err(e) => {
+                                self.shutdown(Some(e));
+                                return;
+                            }
+                        };
+                        if let Err(e) = self.send_internal(MessageType::PingPong, &payload, 0).await {
+                            self.shutdown(Some(e));
+                            return;
                         }
                         let timeout = if self.inner.config.keepalive_timeout.is_zero() {
                             self.inner.config.keepalive_interval * 2
@@ -912,12 +977,10 @@ impl Connection {
                 }
                 true = pong_expired => {
                     self.shutdown(Some(Error::KeepaliveTimeout));
-                    self.note_loop_exit();
                     return;
                 }
                 true = idle_tick => {
                     self.shutdown(Some(Error::IdleTimeout));
-                    self.note_loop_exit();
                     return;
                 }
             }
@@ -931,6 +994,7 @@ impl Connection {
         plaintext: &[u8],
         pad_len: u8,
     ) -> Result<(), Error> {
+        let _writer = self.inner.writer.lock().await;
         loop {
             match self
                 .inner
@@ -960,6 +1024,24 @@ impl Connection {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+fn validate_config(config: &ClientConfig) -> Result<(), Error> {
+    if config.outbound_queue == 0 {
+        return Err(Error::InvalidOutboundQueueCapacity);
+    }
+    Ok(())
+}
+
+fn validate_handshake_response_envelope(frame: &Frame) -> Result<(), Error> {
+    if frame.header.msg_type != MessageType::HandshakeResponse
+        || frame.header.session_id != [0u8; 16]
+        || frame.header.sequence != 0
+        || frame.header.pad_length != 0
+    {
+        return Err(Error::Handshake);
+    }
+    Ok(())
+}
+
 fn app_msg_to_wire(msg: &ApplicationMessage) -> Result<(MessageType, Vec<u8>), Error> {
     match msg {
         ApplicationMessage::EncryptedData(m) => {
@@ -984,5 +1066,92 @@ fn parse_inbound(frame: &Frame, plaintext: &[u8]) -> Result<ApplicationMessage, 
             SessionClose::unmarshal_binary(plaintext)?,
         )),
         _ => Err(Error::MessageType),
+    }
+}
+
+#[cfg(test)]
+mod handshake_envelope_tests {
+    use super::*;
+
+    fn response_frame() -> Frame {
+        Frame {
+            header: Header::new(MessageType::HandshakeResponse, [0u8; 16], 0, 96, 0),
+            payload: vec![0u8; 96],
+            tag: [0u8; crate::AEAD_TAG_SIZE],
+            padding: vec![],
+        }
+    }
+
+    #[test]
+    fn terminal_state_is_first_wins_for_clean_and_error() {
+        let mut clean_first = TerminalState::Unset;
+        clean_first.set_once(None);
+        clean_first.set_once(Some(Error::IdleTimeout));
+        assert!(matches!(clean_first, TerminalState::Clean));
+        assert_eq!(clean_first.cause(), None);
+
+        let mut error_first = TerminalState::Unset;
+        error_first.set_once(Some(Error::KeepaliveTimeout));
+        error_first.set_once(None);
+        assert_eq!(error_first.cause(), Some(Error::KeepaliveTimeout));
+    }
+
+    #[test]
+    fn rejects_zero_outbound_queue_capacity() {
+        let config = ClientConfig {
+            outbound_queue: 0,
+            ..ClientConfig::default()
+        };
+        assert_eq!(
+            validate_config(&config),
+            Err(Error::InvalidOutboundQueueCapacity)
+        );
+
+        let config = ClientConfig {
+            outbound_queue: 1,
+            ..ClientConfig::default()
+        };
+        assert_eq!(validate_config(&config), Ok(()));
+    }
+
+    #[test]
+    fn accepts_canonical_response_and_ignored_receive_fields() {
+        let mut frame = response_frame();
+        frame.header.flags = 0x80;
+        frame.header.reserved = [1, 2, 3, 4];
+        assert!(validate_handshake_response_envelope(&frame).is_ok());
+    }
+
+    #[test]
+    fn rejects_malformed_response_envelope() {
+        let mut wrong_type = response_frame();
+        wrong_type.header.msg_type = MessageType::EncryptedData;
+        assert!(matches!(
+            validate_handshake_response_envelope(&wrong_type),
+            Err(Error::Handshake)
+        ));
+
+        let mut session = response_frame();
+        session.header.session_id[0] = 1;
+        assert!(matches!(
+            validate_handshake_response_envelope(&session),
+            Err(Error::Handshake)
+        ));
+
+        let mut sequence = response_frame();
+        sequence.header.sequence = 1;
+        assert!(matches!(
+            validate_handshake_response_envelope(&sequence),
+            Err(Error::Handshake)
+        ));
+
+        let mut padded = response_frame();
+        padded.header.flags = crate::header::Flags::PADDING;
+        padded.header.pad_length = 1;
+        padded.padding.push(0);
+        assert!(matches!(
+            validate_handshake_response_envelope(&padded),
+            Err(Error::Handshake)
+        ));
     }
 }
