@@ -87,7 +87,7 @@ Senders must zero reserved fields and emit only permitted flags. Receivers must 
 - A frame that parses is not necessarily semantically valid; handshake, replay, epoch, and message-state rules require semantic tests.
 - For wire-visible changes, demonstrate Rust-to-Go and Go-to-Rust parity, including exact bytes and rejection behavior. Record the Rust and Go revisions and commands used in the pull request.
 
-The current checkout contains the shared vector files but no dedicated Rust `tests/wire_vectors.rs` integration test. Do not describe fixture presence alone as executed cross-language interoperability coverage.
+Run `cargo test wire_vectors` to execute the cross-language fixture suite. Do not describe fixture presence alone as executed cross-language interoperability coverage.
 
 ## Documentation
 
@@ -138,6 +138,28 @@ Scope is the affected module or layer (e.g. `session`, `replay`, `connection`,
 Breaking changes must include a `BREAKING CHANGE:` footer. Release notes are
 generated automatically from commit history by git-cliff; commits that do not
 follow the convention will be omitted from the changelog.
+
+### Opening a PR from the command line
+
+If you prefer `gh` over the web UI, supply the PR body explicitly — the
+template is not applied automatically by the CLI:
+
+```sh
+gh pr create \
+  --base main \
+  --head <your-branch> \
+  --title "fix(connection): short description" \
+  --body-file .pr-body.md
+```
+
+Copy `.github/pull_request_template.md` into `.pr-body.md`, fill it in, then
+delete the file after the PR is created. Do not commit it.
+
+After creation, verify the result:
+
+```sh
+gh pr view --json title,body
+```
 
 ## Release process
 
