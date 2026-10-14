@@ -56,6 +56,9 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
       # ── Create release branch ───────────────────────────────────────────────
       - name: Create release branch
         run: |
@@ -65,12 +68,20 @@ jobs:
       - name: Bump Cargo.toml version
         shell: bash
         run: |
-          # Replace the version line in [package] section only.
-          sed -i "s/^version *= *\"[^\"]*\"/version = \"$VERSION\"/" Cargo.toml
+          # Replace the version line in [package] section only (between
+          # [package] and the next section header). Using awk so we don't
+          # accidentally touch dependency version fields like `snow = { version = "0.9" }`.
+          awk '
+            /^\[package\]/ { in_pkg=1 }
+            /^\[/ && !/^\[package\]/ { in_pkg=0 }
+            in_pkg && /^version[[:space:]]*=/ { sub(/^version[[:space:]]*=[[:space:]]*"[^"]*"/, "version     = \"'"$VERSION"'\"") }
+            { print }
+          ' Cargo.toml > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
           # Verify the change.
+          echo "Cargo.toml version after bump:"
           grep '^version' Cargo.toml
-          # Update Cargo.lock to reflect the new version.
-          cargo update --workspace --locked 2>/dev/null || cargo generate-lockfile
+          # Update Cargo.lock to reflect the new version (no --locked: we want to write it).
+          cargo update --workspace
 
       # ── Commit and push ─────────────────────────────────────────────────────
       - name: Commit version bump
