@@ -2,181 +2,246 @@
 
 # dgproto-rs
 
-**Rust client library for the DGProto v1 secure transport protocol.**
+**A focused Rust client for the DGProto v1 secure transport protocol.**
 
 [![CI](https://github.com/datagram-messenger/dgproto-rs/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/datagram-messenger/dgproto-rs/actions/workflows/ci.yml?query=branch%3Amain)
 [![Crates.io](https://img.shields.io/crates/v/dgproto.svg)](https://crates.io/crates/dgproto)
-[![docs.rs](https://docs.rs/dgproto/badge.svg)](https://docs.rs/dgproto)
-[![Rust 1.80+](https://img.shields.io/badge/Rust-1.80%2B-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
-[![DGProto v1](https://img.shields.io/badge/protocol-DGProto%20v1-6f42c1)](https://github.com/datagram-messenger/dgproto-go/blob/main/docs/protocol/dgproto-v1.md)
+[![docs.rs](https://docs.rs/dgproto/badge.svg)](https://docs.rs/dgproto/latest/dgproto/)
+[![MSRV](https://img.shields.io/badge/MSRV-1.80-orange.svg)](https://www.rust-lang.org/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 </div>
 
----
+`dgproto` implements the client/initiator side of DGProto v1 over asynchronous
+Tokio TCP. It packages framing, typed messages, a Noise XX handshake, encrypted
+sessions, replay handling, rekeying, and connection lifecycle management behind
+a small Rust API. It is a library crate: applications retain control of key
+provisioning, authorization, reconnect policy, and message semantics.
 
-`dgproto-rs` is a Rust client library for **DGProto v1** — a binary, session-oriented, cryptographically secured transport protocol for low-latency bidirectional communication between native clients and Go backends.
+> [!IMPORTANT]
+> **Compatibility status**
+>
+> - **Crate:** `dgproto` 0.4.1
+> - **Protocol:** DGProto v1 **draft**, Implementation Track
+> - The crate version and protocol version are independent.
+> - The wire specification may still change while the protocol remains a draft.
+> - This crate implements the client/initiator role; the normative specification
+>   and server implementation live in [`dgproto-go`].
 
-This is a **pure library crate** — no binary, no server, no framework. It handles the full client-side stack: async TCP transport, Noise XX handshake, ChaCha20-Poly1305 encryption, replay protection, and automatic rekeying.
+## Capabilities
 
-> **Status:** The DGProto v1 specification is a draft. The protocol and crate are versioned independently. Wire compatibility should be claimed only after stabilization.
+- Asynchronous TCP transport on Tokio.
+- Three-flight `Noise_XX_25519_ChaChaPoly_SHA256` initiator handshake.
+- ChaCha20-Poly1305 authenticated encryption for session frames.
+- Typed `EncryptedData`, `Ack`, `ErrorMessage`, and `SessionClose` messages.
+- Application fields encoded as aligned TLVs, with unknown fields preserved on
+  supported receive paths.
+- Per-direction sequence numbers and replay-window enforcement.
+- Directional epoch rekeying with bounded previous-key grace handling.
+- Bounded outbound queue, write confirmation, explicit padding, keepalive, idle
+  timeout, lifecycle callbacks, and graceful or immediate shutdown.
+- Shared wire-vector tests against data maintained with the Go implementation.
 
-> [!NOTE]
-> **Client (initiator) role only.** The server counterpart is [`dgproto-go`](https://github.com/datagram-messenger/dgproto-go). The canonical wire specification lives there too.
+## MVP scope
 
-## How it works
+The current implementation intentionally targets a narrow interoperability
+baseline:
 
-| Layer | Role | What it does |
-|-------|------|--------------|
-| **L4** | Application | Typed messages: `EncryptedData`, `Ack`, `ErrorMessage`, `SessionClose` |
-| **L3** | Session | Sequence numbers, directional epochs, rekeying, replay window, keepalive |
-| **L2** | Cryptography | Noise XX initiator, ChaCha20-Poly1305 AEAD, HMAC-SHA256 key ratchet |
-| **L1** | Framing | 40-byte fixed header, TLV encoding, optional padding |
-| **L0** | Transport | Async TCP via Tokio — body length from header, no length prefix |
+- **Included:** client/initiator library, Tokio TCP, DGProto v1 framing and typed
+  messages, Noise XX, encrypted sessions, replay protection, rekeying, optional
+  padding, and connection lifecycle management.
+- **Not included:** a server/responder, QUIC, UDP, WebSocket, Noise IK, resumption
+  tickets, 0-RTT, transport obfuscation, or an application authorization system.
 
 ## Install
 
 ```toml
 [dependencies]
-dgproto = "0.4"
-tokio   = { version = "1", features = ["full"] }
+dgproto = "0.4.1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
-Minimum supported Rust version: **1.80**.
+The minimum supported Rust version (MSRV) is **1.80**.
 
 ## Quick start
 
+This complete example generates a client key, connects, writes one application
+message, and closes the session:
+
 ```rust
 use dgproto::{ClientConfig, Connection, EncryptedData, StaticKey, Tlv};
-use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> Result<(), dgproto::Error> {
-    // Load a persistent 32-byte X25519 private key.
-    // Generate once with StaticKey::generate(); store the private bytes securely.
-    let key = StaticKey::load(&private_bytes)?;
+    let client_key = StaticKey::generate()?;
 
     let config = ClientConfig {
-        static_key:        key,
-        handshake_timeout: Duration::from_secs(10),
-        write_timeout:     Duration::from_secs(10),
-        outbound_queue:    64,
+        static_key: client_key,
+
+        // Replace None with Some(trusted_server_public_key) when the expected
+        // server key has been provisioned through a trusted channel.
+        server_static_hint: None,
+
         ..Default::default()
     };
 
-    // Dial and complete the three-flight Noise XX handshake.
-    let conn = Connection::connect("127.0.0.1:8090", config).await?;
+    let connection = Connection::connect("127.0.0.1:8090", config).await?;
 
-    // Send a typed application message.
-    conn.send(EncryptedData {
-        stream_id:        1,
-        app_message_type: 0x01,
-        fields:           vec![Tlv::new(1, b"hello datagram".as_ref())],
-    })?;
+    connection
+        .send_and_wait(EncryptedData {
+            stream_id: 1,
+            app_message_type: 0x01,
+            fields: vec![Tlv::new(1, b"hello DGProto".as_slice())],
+        })
+        .await?;
 
-    // Graceful shutdown: sends SessionClose and waits for the peer's reply.
-    conn.close().await
+    connection.close().await
 }
 ```
 
-See [Getting started](docs/guides/getting-started.md) for a full walkthrough including message handling, key setup, and error handling.
+> [!WARNING]
+> `StaticKey::generate()` is shown inline to keep the example self-contained.
+> For a persistent client identity, generate once, store the private bytes in an
+> OS-backed secret store or a file with restrictive permissions, and reload them
+> with `StaticKey::load()` on later runs. Never log or commit private key bytes.
+>
+> `server_static_hint: None` accepts any server static key that completes the
+> Noise XX handshake. Where server identity matters, provision the expected
+> 32-byte public key through a trusted channel and set
+> `server_static_hint: Some(trusted_server_public_key)`.
 
-## Key management
+The server must be running and its admission policy must allow the client's
+public key. See [Getting started] and [Key management] for persistence,
+registration, inbound handlers, and operational setup.
 
-The static private key is your cryptographic identity. Generate it once, persist
-it securely, and reload it on every subsequent startup — the server must register
-your public key before you can connect.
+## Connection lifecycle
 
-```rust
-use dgproto::StaticKey;
+| Operation | Semantics |
+|---|---|
+| `Connection::connect` | Dials TCP, completes the Noise XX handshake, then starts read, write, and maintenance tasks. |
+| `send` | Non-blocking bounded enqueue; fails if the queue is full or the connection is closing. |
+| `send_and_wait` | Waits until the write loop reports that the frame was written to the TCP socket. It is not a peer acknowledgment. |
+| `wait_for_close` | Waits for all connection tasks and returns the retained first terminal cause, if any. |
+| `close` | Initiates a `SessionClose` exchange and waits for connection tasks to stop. |
+| `abort` | Cancels immediately without a close handshake; task termination can be observed with `wait_for_close`. |
 
-// First run: generate and persist.
-let key = StaticKey::generate()?;
-let private_bytes = key.to_private_bytes(); // Zeroizing<[u8; 32]>
-std::fs::write(&key_path, private_bytes.as_ref())?;
+`Connection` is a cheap clone backed by shared state and is `Send + Sync`.
+Inbound handlers run serially for each connection, so a slow handler delays
+later inbound messages. After closing begins, subsequent sends fail with
+`Error::ConnectionClosed`.
 
-// Print the public key for server registration.
-println!("Register this public key: {}", key.public_hex());
+## Protocol and security model
 
-// Subsequent runs: load from disk.
-let key = StaticKey::load(&std::fs::read(&key_path)?)?;
-```
+DGProto v1 uses a fixed 40-byte little-endian frame header and no outer transport
+length prefix. Handshake traffic establishes directional session secrets with
+`Noise_XX_25519_ChaChaPoly_SHA256`; encrypted frames use ChaCha20-Poly1305. The
+received header and cleartext padding are authenticated as associated data.
+Directional sequences start at 1, replay state is committed only after successful
+authentication, and session keys are rekeyed by epoch.
 
-> [!IMPORTANT]
-> Never log, commit, or write the static private key to disk without
-> restrictive permissions (Unix: `0o600`). Losing the key requires
-> re-registration with every server you connect to.
+Noise XX authenticates **possession** of the static keys exchanged during the
+handshake. That property does not replace trusted server-key provisioning or
+application authorization. Without a trusted `server_static_hint`, a successful
+handshake alone does not establish that the peer is the intended server. The
+server remains responsible for client admission and authorization, while the
+application remains responsible for key distribution, rotation, secret storage,
+endpoint security, and padding policy.
 
-See [Key Management Guide](docs/guides/key-management.md) for the full
-persist-and-reload pattern, platform-specific paths, and rotation procedure.
-
-## Sending and lifecycle
-
-| Method | Semantics |
-|--------|-----------|
-| `conn.send(msg)` | Enqueues into the bounded outbound channel. Returns immediately; `Err` if the queue is full or the connection is closed. |
-| `conn.send_and_wait(msg).await` | Enqueues and awaits confirmation that the frame was written to the socket. Does **not** guarantee peer receipt. |
-| `conn.send_padded(msg, pad_len)` | Like `send`, with explicit random padding (0–255 bytes). Padding policy is the caller's responsibility. |
-| `conn.close().await` | Sends `SessionClose`, waits for the peer's reply, then tears down the connection. |
-| `conn.abort()` | Terminates the connection immediately without a close handshake. |
-
-The first observed terminal cause is always retained. `Connection` is `Clone` — all clones share the same underlying session.
-
-## Security
-
-- **Mutual authentication** — Noise XX proves both sides' identity before any application data is exchanged.
-- **Authenticated encryption** — ChaCha20-Poly1305 AEAD on every data frame; the full 40-byte header and padding are authenticated as AAD.
-- **Replay protection** — per-direction sequences starting at 1; a 2048-entry sliding bitmap window rejects duplicates. Replay check precedes decryption.
-- **Automatic rekeying** — after 2³² frames or 10 minutes per epoch, with a 2048-frame / 30-second grace window for in-flight frames.
-- **Key material zeroing** — all key types implement `ZeroizeOnDrop`.
-
-> [!CAUTION]
-> Report vulnerabilities **privately** — do not open public issues for suspected security bugs.
-> See [SECURITY.md](SECURITY.md).
-
-## Wire compatibility
-
-Parsers and serializers are validated against the shared wire test vectors from [`dgproto-go`](https://github.com/datagram-messenger/dgproto-go/tree/main/testdata/vectors):
-
-```sh
-cargo test wire_vectors
-```
-
-Any divergence from the Go reference is a **bug**, not a design choice.
-
-## Development
-
-```sh
-# Tests
-cargo test
-cargo test --release          # CI requirement
-
-# Lint and format
-cargo clippy --all-targets -- -D warnings
-cargo fmt --check
-
-# Fuzz parsers (requires cargo-fuzz + nightly)
-cargo +nightly fuzz run fuzz_header -- -max_total_time=60
-cargo +nightly fuzz run fuzz_frame  -- -max_total_time=60
-cargo +nightly fuzz run fuzz_tlv    -- -max_total_time=60
-
-# Check MSRV
-cargo +1.80 test
-```
+The [DGProto v1 specification] is normative for wire behavior. The Rust and Go
+implementations plus [shared vectors] provide compatibility evidence for the
+covered cases; they are not a promise of stable wire compatibility while the
+protocol is a draft.
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [Getting started](docs/guides/getting-started.md) | Full walkthrough: key setup, connecting, sending, handling messages |
-| [Connection lifecycle](docs/guides/connection-lifecycle.md) | Reconnect patterns, keepalive, idle timeout, lifecycle callbacks |
-| [Key management](docs/guides/key-management.md) | Persist, load, and rotate your static identity key |
-| [Architecture](docs/architecture/overview.md) | Connection data flow, concurrency model, rekeying, shutdown |
-| [Protocol specification](https://github.com/datagram-messenger/dgproto-go/blob/main/docs/protocol/dgproto-v1.md) | Normative wire format (lives in `dgproto-go`) |
-| [API reference](https://docs.rs/dgproto) | Generated docs on docs.rs |
-| [dgproto-go](https://github.com/datagram-messenger/dgproto-go) | Go reference implementation and server library |
-| [Contributing](.github/CONTRIBUTING.md) | Contribution workflow and requirements |
+| Resource | Purpose |
+|---|---|
+| [API reference] | Public Rust API documentation on docs.rs. |
+| [Getting started] | Dependency setup, client identity, handlers, sending, and shutdown. |
+| [Key management] | Generate, persist, reload, register, and rotate static keys. |
+| [Connection lifecycle] | Shutdown, termination, reconnects, keepalive, and timeouts. |
+| [Architecture] | Internal layers, task ownership, and data flow. |
+| [DGProto v1 specification] | Normative protocol definition. |
+| [`dgproto-go`] | Reference server implementation and specification host. |
+| [Shared vectors] | Cross-implementation wire fixtures. |
+
+## Testing and quality
+
+CI runs on Linux, Windows, and macOS. The stable jobs execute these commands:
+
+```sh
+cargo fmt --all -- --check
+cargo clippy --all-targets -- -D warnings
+cargo test --all-features
+RUSTDOCFLAGS="-D warnings" cargo doc --all-features --no-deps
+```
+
+CI also runs release tests on Linux and checks the declared MSRV with Rust 1.80:
+
+```sh
+cargo test --release --all-features
+cargo check --all-features
+```
+
+Parser fuzzing uses nightly Rust and `cargo-fuzz`. CI smoke-tests all four
+targets; longer local runs are appropriate for parser changes:
+
+```sh
+cargo +nightly fuzz run fuzz_header -- -max_total_time=60
+cargo +nightly fuzz run fuzz_frame -- -max_total_time=60
+cargo +nightly fuzz run fuzz_tlv -- -max_total_time=60
+cargo +nightly fuzz run fuzz_messages -- -max_total_time=60
+```
+
+The test suite includes unit tests, loopback integration scenarios, and
+cross-implementation header, frame, TLV, and message vectors.
+
+## Platforms and runtime
+
+- **Runtime:** Tokio, using asynchronous TCP and Tokio synchronization/timer
+  primitives.
+- **CI platforms:** Linux, Windows, and macOS.
+- **Rust edition:** 2021.
+- **MSRV:** Rust 1.80.
+
+Platform coverage describes the CI matrix, not a guarantee for every target or
+network environment.
+
+## Releases
+
+Published crate versions are available on [crates.io]. Release notes and source
+tags are available on the [GitHub releases] page. Because crate and protocol
+versions are independent, report both when describing interoperability or a
+wire-level issue.
+
+## Contributing
+
+Bug fixes, tests, and documentation improvements are welcome. Read the
+[contribution guide] before opening a pull request. Protocol-visible changes
+must be checked against the normative specification and shared vectors; keep
+changes focused and run the applicable CI commands locally.
+
+## Security
+
+Please do not report suspected vulnerabilities in a public issue. Use the
+private [GitHub security advisory] form and include the affected crate version,
+protocol draft, impact, and reproduction details. See the [security policy] for
+key-handling and disclosure guidance.
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+Licensed under the [Apache License 2.0](LICENSE).
+
+[API reference]: https://docs.rs/dgproto/latest/dgproto/
+[Architecture]: docs/architecture/overview.md
+[Connection lifecycle]: docs/guides/connection-lifecycle.md
+[contribution guide]: .github/CONTRIBUTING.md
+[crates.io]: https://crates.io/crates/dgproto
+[DGProto v1 specification]: https://github.com/datagram-messenger/dgproto-go/blob/main/docs/protocol/dgproto-v1.md
+[`dgproto-go`]: https://github.com/datagram-messenger/dgproto-go
+[Getting started]: docs/guides/getting-started.md
+[GitHub releases]: https://github.com/datagram-messenger/dgproto-rs/releases
+[GitHub security advisory]: https://github.com/datagram-messenger/dgproto-rs/security/advisories/new
+[Key management]: docs/guides/key-management.md
+[security policy]: SECURITY.md
+[Shared vectors]: https://github.com/datagram-messenger/dgproto-go/tree/main/testdata/vectors
