@@ -31,10 +31,15 @@ permissions:
   contents: write        # push the release branch
   pull-requests: write   # open the PR
 
+concurrency:
+  group: release-prep
+  cancel-in-progress: false
+
 jobs:
   prepare:
     name: Prepare release v${{ inputs.version }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v5
@@ -42,8 +47,10 @@ jobs:
       # ── Validate input ──────────────────────────────────────────────────────
       - name: Validate version format
         shell: bash
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
         run: |
-          VERSION="${{ inputs.version }}"
+          VERSION="$VERSION_INPUT"
           if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "::error::Version '$VERSION' is not a valid semver (expected X.Y.Z)"
             exit 1
