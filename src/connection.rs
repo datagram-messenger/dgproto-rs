@@ -118,8 +118,11 @@ pub struct ClientConfig {
     /// Default: 64.
     pub outbound_queue: usize,
 
-    /// Handler queue capacity (number of inbound messages buffered before
-    /// the handler is invoked). Default: 64.
+    /// Handler invocation mode. Default: 64 (reserved for future use).
+    ///
+    /// Currently the handler is invoked **synchronously** in the read loop —
+    /// a slow handler stalls all subsequent inbound messages on this connection.
+    /// Buffered/concurrent dispatch is planned for a future release.
     pub handler_queue: usize,
 
     /// Optional inbound message handler. If `None`, inbound application
@@ -545,8 +548,7 @@ impl Connection {
         result
     }
 
-    /// Terminate the connection immediately without a close handshake.
-    /// Wait until the connection terminates.
+    /// Wait until the connection terminates and return the terminal cause.
     ///
     /// Resolves to:
     /// - `None` — clean shutdown: `SessionClose` was exchanged by either side,
@@ -592,6 +594,13 @@ impl Connection {
             .map(|e| e.clone())
     }
 
+    /// Terminate the connection immediately without a close handshake.
+    ///
+    /// Cancels all I/O and session tasks. Fire-and-forget — returns before
+    /// the loops have fully exited. To wait for teardown, call
+    /// [`wait_for_close`](Self::wait_for_close) afterwards.
+    ///
+    /// Subsequent [`send`](Self::send) calls return [`Error::ConnectionClosed`].
     pub fn abort(&self) {
         self.shutdown(Some(Error::ConnectionClosed));
     }
@@ -772,11 +781,24 @@ impl Connection {
                 Some(req) = close_rx.recv() => {
                     let payload = match req.message.marshal_binary() {
                         Ok(p) => p,
-                        Err(e) => { let _ = req.result.send(Err(e)); self.shutdown(None); self.note_loop_exit(); return; }
+                        Err(e) => {
+                            let _ = req.result.send(Err(e.clone()));
+                            self.shutdown(Some(e));
+                            self.note_loop_exit();
+                            return;
+                        }
                     };
                     let result = self.send_internal(MessageType::SessionClose, &payload, 0).await;
-                    let _ = req.result.send(result);
-                    self.shutdown(None);
+                    match result {
+                        Ok(()) => {
+                            let _ = req.result.send(Ok(()));
+                            self.shutdown(None);
+                        }
+                        Err(e) => {
+                            let _ = req.result.send(Err(e.clone()));
+                            self.shutdown(Some(e));
+                        }
+                    }
                     self.note_loop_exit();
                     return;
                 }
@@ -816,12 +838,14 @@ impl Connection {
         let mut idle_interval = if self.inner.config.idle_timeout.is_zero() {
             None
         } else {
-            Some(tokio::time::interval(self.inner.config.idle_timeout))
+            let d = self.inner.config.idle_timeout;
+            Some(tokio::time::interval_at(tokio::time::Instant::now() + d, d))
         };
         let mut keepalive_interval = if self.inner.config.keepalive_interval.is_zero() {
             None
         } else {
-            Some(tokio::time::interval(self.inner.config.keepalive_interval))
+            let d = self.inner.config.keepalive_interval;
+            Some(tokio::time::interval_at(tokio::time::Instant::now() + d, d))
         };
         let mut pong_deadline: Option<tokio::time::Instant> = None;
         let mut outstanding_nonce: u64 = 0;

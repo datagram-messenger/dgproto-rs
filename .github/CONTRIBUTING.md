@@ -1,24 +1,50 @@
 # Contributing to dgproto-rs
 
-Thank you for helping improve the Rust client implementation of DGProto v1. Framing, parsing, authentication, replay, rekey, and connection-lifecycle changes are security-sensitive. Keep changes narrow, reviewable, and backed by tests.
+Thank you for your interest in contributing! `dgproto-rs` is a security-sensitive
+Rust implementation of the DGProto v1 client transport. We welcome bug reports,
+documentation improvements, test coverage, and code fixes. Please keep changes
+narrow and reviewable.
+
+## Table of contents
+
+- [Ways to contribute](#ways-to-contribute)
+- [Prerequisites](#prerequisites)
+- [Getting started](#getting-started)
+- [Building and testing](#building-and-testing)
+- [Making changes](#making-changes)
+- [Commit convention](#commit-convention)
+- [Opening a pull request](#opening-a-pull-request)
+- [Reporting security issues](#reporting-security-issues)
+
+## Ways to contribute
+
+- **Bug reports** — open a GitHub issue with a minimal reproduction.
+- **Documentation** — fix typos, clarify rustdoc, improve guides.
+- **Tests** — add missing coverage, especially for error paths and edge cases.
+- **Bug fixes** — see open issues labelled `bug`.
+- **Protocol correctness** — if you find a deviation from the
+  [DGProto v1 spec](https://github.com/datagram-messenger/dgproto-go/blob/main/docs/protocol/dgproto-v1.md),
+  please open an issue before sending a PR.
+
+For larger changes, open an issue first to discuss the approach.
 
 ## Prerequisites
 
-- Rust **1.80 or newer**. CI also checks the declared MSRV with Rust 1.80.
-- The `rustfmt` and `clippy` components.
-- Git.
-- For fuzzing only: a nightly Rust toolchain and `cargo-fuzz`.
-- A local checkout of `dgproto-go` is useful when validating cross-language behavior. Its `docs/protocol/dgproto-v1.md` is the normative protocol specification.
+**Required:**
 
-Install the Rust components and optional fuzzing tools with:
+- Rust **1.80 or newer** (`rustup update stable`)
+- `rustfmt` and `clippy` components (`rustup component add rustfmt clippy`)
+- Git
 
-```sh
-rustup component add rustfmt clippy
-rustup toolchain install nightly
-cargo install cargo-fuzz --locked
-```
+**Optional — for fuzzing only:**
 
-## Setup
+- A nightly Rust toolchain (`rustup toolchain install nightly`)
+- `cargo-fuzz` (`cargo install cargo-fuzz --locked`)
+- A local checkout of [`dgproto-go`](https://github.com/datagram-messenger/dgproto-go)
+  is useful when validating cross-language behavior; its
+  `docs/protocol/dgproto-v1.md` is the normative protocol specification.
+
+## Getting started
 
 ```sh
 git clone https://github.com/datagram-messenger/dgproto-rs.git
@@ -26,102 +52,78 @@ cd dgproto-rs
 cargo fetch --locked
 ```
 
-`Cargo.lock` and `fuzz/Cargo.lock` are tracked. Do not delete, ignore, or update them incidentally. Never commit generated `target/` trees, fuzz artifacts, private keys, credentials, user data, or production captures.
+`Cargo.lock` and `fuzz/Cargo.lock` are tracked. Please do not delete or update
+them incidentally. Never commit generated `target/` trees, fuzz artifacts,
+private keys, credentials, or production captures.
 
-## Build and validation
+## Building and testing
 
-Run commands from the repository root.
+Run all checks from the repository root before opening a PR:
 
 ```sh
-cargo build --all-features
-cargo check --all-features
-cargo test --all-features
-cargo test --release --all-features
-cargo fmt --all -- --check
-cargo clippy --all-targets -- -D warnings
-cargo doc --all-features --no-deps
+cargo fmt --all -- --check        # formatting
+cargo clippy --all-targets -- -D warnings  # lints
+cargo test --all-features         # tests
+cargo doc --all-features --no-deps         # docs
 ```
 
-To apply Rust formatting locally:
+To auto-format locally:
 
 ```sh
 cargo fmt --all
 ```
 
-CI runs formatting, Clippy, and debug/release tests on Linux, Windows, and macOS, plus `cargo check --all-features` on Rust 1.80.
+CI runs the same checks on Linux, Windows, and macOS, plus a release-mode test
+run and an MSRV check on Rust 1.80.
 
 ### Fuzzing
 
-The fuzz package defines four parser targets. Run them from the repository root:
+The fuzz package defines four parser targets:
 
 ```sh
-cargo +nightly fuzz run fuzz_header -- -max_total_time=60
-cargo +nightly fuzz run fuzz_frame -- -max_total_time=60
-cargo +nightly fuzz run fuzz_tlv -- -max_total_time=60
+cargo +nightly fuzz run fuzz_header   -- -max_total_time=60
+cargo +nightly fuzz run fuzz_frame    -- -max_total_time=60
+cargo +nightly fuzz run fuzz_tlv      -- -max_total_time=60
 cargo +nightly fuzz run fuzz_messages -- -max_total_time=60
 ```
 
-CI uses 30-second smoke runs. Longer local runs are encouraged for parser changes. Do not commit `fuzz/target/`, `fuzz/artifacts/`, or local corpora unless a reviewed deterministic regression fixture is intentionally being added.
+CI uses 30-second smoke runs. Longer local runs are encouraged for parser
+changes. Please do not commit `fuzz/target/`, `fuzz/artifacts/`, or local
+corpora unless you are intentionally adding a reviewed regression fixture.
 
-## Protocol and wire compatibility
+## Making changes
 
-The normative specification is maintained in [`dgproto-go`](https://github.com/datagram-messenger/dgproto-go/blob/main/docs/protocol/dgproto-v1.md). The protocol is still a draft and is versioned independently from this crate. Do not claim wire compatibility from a crate version alone.
+### Protocol and wire compatibility
 
-Before changing wire-visible behavior:
+This crate implements a security-sensitive wire protocol. Please keep the
+following in mind:
 
-1. Read the relevant specification section, Rust implementation, callers, tests, shared vectors, and CI.
-2. Classify the effect on bytes, limits, derivations, state transitions, concurrency, public API, and interoperability.
-3. Preserve exact DGProto v1 invariants unless the normative specification changes: `DGP1`, version 1, the 40-byte little-endian header, no outer length prefix, the 65535-byte frame limit, Noise XX flight order and prologue, ChaCha20-Poly1305, sequence/nonce rules, replay check-then-commit, and directional rekey ordering.
-4. Do not introduce negotiation, alternative suites, resumption, 0-RTT, obfuscation, or a responder/server API into the strict MVP client.
-5. Add focused success, malformed-input, boundary, and invalid-state tests. Lifecycle changes also need cancellation, queue-bound, shutdown, and terminal-error coverage.
+- The normative specification lives in
+  [`dgproto-go/docs/protocol/dgproto-v1.md`](https://github.com/datagram-messenger/dgproto-go/blob/main/docs/protocol/dgproto-v1.md).
+  Read the relevant section before changing any wire-visible behavior.
+- Core invariants — the 40-byte header layout, Noise XX flight order, ChaCha20-Poly1305
+  AEAD, nonce construction, replay check-then-commit, and rekey ordering — must not
+  change without an explicit protocol decision and updated test vectors.
+- Please do not introduce new protocol extensions, negotiation, or a server/responder
+  role; this crate is strictly a client (initiator) implementation.
 
-Senders must zero reserved fields and emit only permitted flags. Receivers must preserve and authenticate the exact received header where required. Never weaken authentication, replay protection, key/nonce uniqueness, or constant-time secret comparisons.
+### Test vectors
 
-## Test vectors and cross-language parity
+`testdata/vectors/*.json` contains interoperability fixtures shared with `dgproto-go`.
+Run `cargo test wire_vectors` to execute them. Please treat these files as
+immutable compatibility evidence — if a wire-visible change requires updating
+vectors, explain the normative basis in the PR and verify parity with the Go
+implementation.
 
-`testdata/vectors/*.json` contains deterministic interoperability fixtures shared with `dgproto-go`. Treat these files as immutable compatibility evidence:
+### Documentation
 
-- Compare the Rust and Go vector directories byte-for-byte before changing fixtures.
-- Do not regenerate or rewrite unrelated vectors.
-- For an intentional vector change, identify whether it tests frame-level parsing/encoding or semantic protocol state, update focused tests in both implementations, and explain the normative specification basis.
-- A frame that parses is not necessarily semantically valid; handshake, replay, epoch, and message-state rules require semantic tests.
-- For wire-visible changes, demonstrate Rust-to-Go and Go-to-Rust parity, including exact bytes and rejection behavior. Record the Rust and Go revisions and commands used in the pull request.
-
-The current checkout contains the shared vector files but no dedicated Rust `tests/wire_vectors.rs` integration test. Do not describe fixture presence alone as executed cross-language interoperability coverage.
-
-## Documentation
-
-Update documentation when behavior, public API, defaults, lifecycle semantics, or compatibility claims change:
+Please update documentation when you change public behavior, API, or defaults:
 
 - `README.md` for user-facing setup and guarantees.
-- `docs/architecture/overview.md` for implementation structure and concurrency.
+- `docs/architecture/overview.md` for structural or concurrency changes.
 - Rustdoc on public items for API contracts.
-- `testdata/vectors/README.md` for fixture scope.
 
-Do not copy the normative protocol into this repository. Link to the canonical `dgproto-go` specification and clearly distinguish normative requirements from implementation notes.
-
-## Pull request checklist
-
-- [ ] The change is scoped and its protocol/security impact is described.
-- [ ] Relevant specification sections, implementation, tests, vectors, and CI were reviewed.
-- [ ] `cargo fmt --all -- --check` passes.
-- [ ] `cargo clippy --all-targets -- -D warnings` passes.
-- [ ] `cargo test --all-features` and, when relevant, release tests pass.
-- [ ] `cargo doc --all-features --no-deps` succeeds without warnings.
-- [ ] Parser changes include malformed, truncated, boundary, and fuzz coverage.
-- [ ] Wire-visible changes include deterministic vectors and cross-language parity evidence.
-- [ ] Public API, lifecycle, and error-contract changes are documented.
-- [ ] No secrets, private keys, production captures, generated build output, or unrelated lockfile changes are included.
-- [ ] The final diff and repository status contain only intended changes.
-
-## Opening a pull request
-
-The repository provides `.github/pull_request_template.md`. GitHub pre-fills
-the PR body with it when you open a PR through the web UI. When opening a PR
-from the command line with `gh`, you must supply the body explicitly — the
-template is **not** applied automatically.
-
-### Commit convention
+## Commit convention
 
 All commits must follow [Conventional Commits](https://www.conventionalcommits.org/):
 
@@ -131,160 +133,51 @@ All commits must follow [Conventional Commits](https://www.conventionalcommits.o
 <body — explain what and why, not how>
 ```
 
-Permitted types: `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `chore`, `ci`.
-Scope is the affected module or layer (e.g. `session`, `replay`, `connection`,
-`messages`, `transport`, `handshake`, `codec`, `header`, `frame`, `tlv`).
+Permitted types: `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `chore`, `ci`.  
+Scope is the affected module (e.g. `connection`, `session`, `replay`, `codec`,
+`handshake`, `transport`, `header`, `frame`, `tlv`, `messages`).
 
 Breaking changes must include a `BREAKING CHANGE:` footer. Release notes are
-generated automatically from commit history by git-cliff; commits that do not
-follow the convention will be omitted from the changelog.
+generated automatically from commit history by
+[git-cliff](https://git-cliff.org/); commits that do not follow the convention
+will be omitted from the changelog.
 
-### Creating a PR with `gh` on Windows
+## Opening a pull request
 
-`gh pr create --body "..."` is unreliable on Windows `cmd.exe` and PowerShell:
-multi-line strings are truncated, and non-ASCII characters (em-dash `—`,
-curly quotes, etc.) are silently corrupted by the shell's code-page conversion.
+GitHub pre-fills the PR body from `.github/pull_request_template.md` when you
+use the web UI. The checklist there covers all the things we look for in a
+review.
 
-**Always write the PR body to a file and pass it with `--body-file`:**
+If you prefer the `gh` CLI, supply the body explicitly — the template is not
+applied automatically by the CLI:
 
 ```sh
-# 1. Write the body to a temporary Markdown file (UTF-8, no BOM).
-#    Fill in the pull_request_template.md sections as appropriate.
+# Copy the template, fill it in, then open the PR.
+cp .github/pull_request_template.md .pr-body.md
+# ... edit .pr-body.md ...
 gh pr create \
   --base main \
   --head <your-branch> \
-  --title "fix(<scope>): <description>" \
+  --title "fix(connection): short description" \
   --body-file .pr-body.md
 
-# 2. Verify the PR was created correctly.
+# Verify the result, then delete the temporary file.
 gh pr view --json title,body
-
-# 3. Delete the temporary file — do not commit it.
-del .pr-body.md        # Windows
-# rm .pr-body.md       # Unix
+rm .pr-body.md   # or: del .pr-body.md on Windows
 ```
 
-**Title rules:**
-- Follow Conventional Commits: `<type>(<scope>): <description>`.
-- Use only ASCII in the title. Avoid em-dashes (`—`), curly quotes, and other
-  non-ASCII punctuation — they corrupt in `cmd.exe` even when the body is fine.
-  Use a plain hyphen-minus (`-`) instead.
-
-**Body rules:**
-- Copy `.github/pull_request_template.md` into `.pr-body.md` and fill it in.
-- Write the file as UTF-8. On Windows, use an editor that saves UTF-8 without
-  BOM (VS Code default, Notepad++ with explicit encoding, etc.).
-- After creating the PR, run `gh pr view --json title,body` and confirm the
-  body is complete and the title contains no garbage characters.
-- Delete `.pr-body.md` before committing. It is listed in `.gitignore` as a
-  precaution, but do not rely on that.
-
-### Updating an existing PR
-
-To fix a title or body after creation:
-
-```sh
-gh pr edit <number> --title "fix(<scope>): <corrected title>"
-gh pr edit <number> --body-file .pr-body.md
-```
-
-Both flags can be combined in one call.
-
-## Release process
-
-Releases are managed by two GitHub Actions workflows and follow a tag-based model.
-Only maintainers with write access to the repository can create releases.
-
-### Versioning
-
-This crate follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html):
-
-- **Patch** (`0.1.x`) — bug fixes, documentation, test improvements. No public API or
-  wire-format change.
-- **Minor** (`0.x.0`) — backwards-compatible new features or public API additions.
-- **Major** (`x.0.0`) — breaking public API changes or wire-format changes that require
-  a DGProto v1 spec update.
-
-The DGProto v1 protocol specification is versioned independently from this crate.
-A crate version does **not** imply wire compatibility with a specific protocol revision.
-
-### Step-by-step: cutting a release
-
-#### 1. Trigger the release-prep workflow
-
-Go to **Actions → Release prep → Run workflow** and enter the new version (e.g. `0.2.0`,
-no `v` prefix). The workflow will:
-
-- Create a branch `chore/release-v<version>`.
-- Bump the version in `Cargo.toml` and update `Cargo.lock`.
-- Open a pull request against `main`.
-
-#### 2. Review and merge the PR
-
-- Check that `Cargo.toml` has the correct version.
-- Ensure all CI checks pass.
-- Merge using **squash** or **rebase** (no merge commits on `main`).
-
-#### 3. Push the release tag
-
-After the PR is merged:
-
-```sh
-git checkout main
-git pull
-git tag v<version>           # e.g. git tag v0.2.0
-git push origin v<version>
-```
-
-The tag push triggers the **Release** workflow (`release.yml`), which:
-
-1. Re-runs the full CI suite (test, clippy, fmt, doc, MSRV) as a final gate.
-2. Verifies the tag matches the version in `Cargo.toml`.
-3. Publishes the crate to [crates.io](https://crates.io/crates/dgproto) using the
-   `CARGO_REGISTRY_TOKEN` secret.
-4. Creates a GitHub Release with the changelog section for this version.
-
-#### 4. Verify the release
-
-- Confirm the crate appears on [crates.io/crates/dgproto](https://crates.io/crates/dgproto).
-- Confirm the GitHub Release is created with the correct release notes.
-- Confirm [docs.rs/dgproto](https://docs.rs/dgproto) builds successfully (may take a few
-  minutes after publication).
-
-### Release notes
-
-Release notes are generated **automatically** by [git-cliff](https://git-cliff.org/)
-when the release tag is pushed. They appear in the GitHub Release — there is no
-`CHANGELOG.md` file in this repository.
-
-git-cliff reads the Conventional Commits history and groups entries by type
-(`feat`, `fix`, `perf`, `refactor`, `docs`, `test`). `chore`, `ci`, and `style`
-commits are excluded. The configuration lives in `cliff.toml`.
-
-To preview what the release notes will look like locally:
-
-```sh
-cargo install git-cliff --locked
-git-cliff --config cliff.toml --unreleased
-```
-
-### Required GitHub secrets and settings
-
-| Secret / setting | Where to set | Purpose |
-|---|---|---|
-| `CARGO_REGISTRY_TOKEN` | Repository → Settings → Secrets → Actions | Publish to crates.io |
-| `crates-io` environment | Repository → Settings → Environments | Optional approval gate before publish |
-
-To obtain a crates.io token: log in to [crates.io](https://crates.io), go to
-**Account Settings → API Tokens**, and create a token scoped to **publish-new** and
-**publish-update** for the `dgproto` crate.
+Please use **squash** or **rebase** merges — no merge commits on `main`.
 
 ---
 
 ## Reporting security issues
 
-Do not report suspected vulnerabilities in a public issue or pull request. Use the repository's private GitHub security advisory form:
+Please do not report suspected vulnerabilities in a public issue or pull
+request. Use the repository's private GitHub security advisory form:
 
 <https://github.com/datagram-messenger/dgproto-rs/security/advisories/new>
 
-Include affected crate versions and, for wire-level behavior, the relevant protocol draft or `dgproto-go` revision, impact, and reproduction details. Do not include real credentials, private keys, user data, or production captures.
+Include affected crate versions and, for wire-level issues, the relevant
+protocol draft or `dgproto-go` revision, impact, and reproduction steps. Please
+do not include real credentials, private keys, user data, or production
+captures.

@@ -184,23 +184,94 @@ Connection (Arc<ConnectionInner>)
   ├─ receive_mutex ── protects: receive Codec, receive epoch, ReplayWindow,
   │                   previous Codec, grace state
   │
-  ├─ outbound: mpsc::channel<OutboundItem>(capacity)
+  ├─ outbound: mpsc::channel<QueuedMessage>(outbound_queue)
+  ├─ close_tx:  mpsc::channel<CloseRequest>(1)
+  ├─ activity_tx: mpsc::channel<()>(1)   ← read_loop signals inbound activity
+  ├─ pong_tx:   mpsc::channel<u64>(1)    ← read_loop forwards pong nonces
   │
   ├─ cancel: CancellationToken   ← abort() / close() / terminal error
+  ├─ terminal: Mutex<Option<Error>>   ← first-wins terminal cause
+  ├─ loops_remaining: AtomicU8(3)     ← decrements to 0 as tasks exit
+  ├─ done: watch::Sender<bool>        ← fires true when loops_remaining == 0
   │
   ├─ Task: read_loop
   │    reads frames → decrypts → dispatches handler (serial)
-  │    on error → cancel.cancel(), store terminal cause
+  │    signals activity_tx on every inbound frame
+  │    forwards pong nonces to pong_tx
+  │    on error → shutdown(Some(e)), note_loop_exit()
   │
   ├─ Task: write_loop
   │    drains outbound channel → encrypts → writes TCP
-  │    on error → cancel.cancel(), store terminal cause
+  │    handles close_tx requests (SessionClose exchange)
+  │    on error → shutdown(Some(e)), note_loop_exit()
   │
   └─ Task: maintenance_loop
-       fires keepalive pings (interval timer)
-       fires rekey check (interval timer)
-       observes cancel token → exits
+       idle timer  (interval_at — first tick deferred by idle_timeout)
+       keepalive   (interval_at — first tick deferred by keepalive_interval)
+       pong deadline (sleep_until — set after each outgoing Ping)
+       observes cancel token → note_loop_exit()
 ```
+
+---
+
+## Data flow: shutdown
+
+```
+                    ┌─ conn.close().await ─────────────────────────────────┐
+                    │  1. closing.store(true)                               │
+                    │  2. send CloseRequest to close_tx                     │
+                    │  3. write_loop: marshal + encrypt SessionClose        │
+                    │  4. write_loop: shutdown(None) or shutdown(Some(e))   │
+                    │  5. await done watch channel                          │
+                    └───────────────────────────────────────────────────────┘
+
+                    ┌─ conn.abort() ────────────────────────────────────────┐
+                    │  shutdown(Some(ConnectionClosed))                     │
+                    │  → cancel.cancel()                                    │
+                    │  → all three loops observe cancel → note_loop_exit()  │
+                    └───────────────────────────────────────────────────────┘
+
+shutdown(cause):
+  1. terminal.lock(): if None → store cause (first-wins; None = clean close)
+  2. closing.store(true, Release)
+  3. cancel.cancel()
+  4. spawn: session.close() + transport.close()  (best-effort)
+
+note_loop_exit():
+  loops_remaining.fetch_sub(1)
+  if prev == 1 (last loop):
+    → fire on_disconnect(terminal.clone())
+    → done.send_replace(true)        ← unblocks wait_for_close()
+```
+
+---
+
+## Data flow: maintenance loop
+
+```
+maintenance_loop
+  │
+  ├─ idle_interval = interval_at(now + idle_timeout, idle_timeout)
+  │    (None if idle_timeout == Duration::ZERO)
+  │
+  ├─ keepalive_interval = interval_at(now + keepalive_interval, keepalive_interval)
+  │    (None if keepalive_interval == Duration::ZERO)
+  │
+  └─ loop:
+       select! {
+         cancel.cancelled()  → note_loop_exit(); return
+         activity_rx.recv()  → idle_interval.reset()
+         pong_rx.recv(nonce) → if nonce matches outstanding_nonce:
+                                   clear pong_deadline
+                                   keepalive_interval.reset()
+         keepalive_tick      → send Ping(nonce); set pong_deadline
+         pong_expired        → shutdown(KeepaliveTimeout)
+         idle_tick           → shutdown(IdleTimeout)
+       }
+```
+
+> **Note:** `interval_at(now + d, d)` defers the first tick by the full period
+> so that a freshly connected client is never immediately timed out.
 
 ---
 

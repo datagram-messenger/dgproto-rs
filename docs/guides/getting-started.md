@@ -14,7 +14,7 @@ key setup, connecting, sending and receiving messages, and shutting down cleanly
 ```toml
 # Cargo.toml
 [dependencies]
-dgproto = "0.2"
+dgproto = "0.4"
 tokio   = { version = "1", features = ["full"] }
 ```
 
@@ -22,29 +22,43 @@ Minimum supported Rust version: **1.80**.
 
 ---
 
-## 2. Generate your static key
+## 2. Set up your static key
 
 Your Noise static private key is your cryptographic identity on the network.
-Generate it **once** and reuse it across every run.
+Generate it **once**, persist it to disk, and reload it on every subsequent run.
 
 ```rust
 use dgproto::StaticKey;
+use std::path::Path;
 
-// Generate a fresh key pair.
-let key = StaticKey::generate()?;
-
-// Print the public key — register this with your server.
-println!("public key: {}", hex::encode(key.public()));
+fn load_or_generate(path: &Path) -> Result<StaticKey, Box<dyn std::error::Error>> {
+    if path.exists() {
+        let bytes = std::fs::read(path)?;
+        Ok(StaticKey::load(&bytes)?)
+    } else {
+        let key = StaticKey::generate()?;
+        std::fs::write(path, key.to_private_bytes().as_ref())?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
+        }
+        Ok(key)
+    }
+}
 ```
 
-Register `key.public()` with the server before attempting to connect. How you
-do this is server-specific (e.g. a registration HTTP endpoint, a config file,
-or an admin CLI command in `dgproto-go`).
+Register the public key with the server before the first connection:
 
-> **Key persistence:** `StaticKey::to_private_bytes()` is not yet available
-> (coming in v0.3.0). Until then, you are responsible for capturing and storing
-> the raw private bytes by whatever mechanism fits your application. On reload,
-> pass them back with `StaticKey::load(&bytes)`. Never store them in plaintext.
+```rust
+let key = load_or_generate(Path::new("identity.key"))?;
+println!("Register this public key: {}", key.public_hex());
+```
+
+> [!IMPORTANT]
+> Never log, commit, or store the private key without restrictive file
+> permissions (Unix: `0o600`). See the [Key Management Guide](key-management.md)
+> for the full persist-and-reload pattern, platform paths, and rotation.
 
 ---
 
@@ -164,20 +178,88 @@ After `close()` or `abort()`, all subsequent `send` calls return
 
 ---
 
-## 6. Minimal complete example
+## 6. Wait for termination and reconnect
+
+`wait_for_close()` blocks until all background tasks have exited and returns
+the terminal cause — `None` for a clean `SessionClose`, `Some(err)` for any
+error termination. Use it to drive a reconnect loop without polling:
 
 ```rust
+loop {
+    match Connection::connect("127.0.0.1:8090", config.clone()).await {
+        Err(e) => eprintln!("connect failed: {e}"),
+        Ok(conn) => {
+            // ... send messages, set up handlers ...
+
+            if let Some(err) = conn.wait_for_close().await {
+                eprintln!("disconnected: {err}");
+            }
+            // clean shutdown — reconnect immediately or after a delay
+        }
+    }
+    tokio::time::sleep(Duration::from_secs(2)).await;
+}
+```
+
+> [!NOTE]
+> `wait_for_close()` returns immediately if the connection is already closed
+> when you call it — there is no race between subscribing and the terminal
+> event firing.
+
+---
+
+## 7. Lifecycle callbacks
+
+`ClientConfig` provides two optional callbacks for connection events:
+
+```rust
+use std::sync::Arc;
+
+let config = ClientConfig {
+    static_key: key,
+
+    // Called once after the Noise XX handshake completes, before the first
+    // inbound message is dispatched. Receives an Arc<Connection> so you can
+    // store or use the connection immediately. Keep it non-blocking.
+    on_connect: Some(Arc::new(|conn: Arc<Connection>| {
+        println!("connected — session {}", hex::encode(conn.session_id()));
+    })),
+
+    // Called when the connection terminates for any reason.
+    // None  = clean SessionClose from either side.
+    // Some(err) = error termination (I/O, auth failure, timeout, etc.).
+    // Keep it non-blocking.
+    on_disconnect: Some(Arc::new(|cause: Option<dgproto::Error>| {
+        match cause {
+            None      => println!("disconnected cleanly"),
+            Some(err) => eprintln!("disconnected with error: {err}"),
+        }
+    })),
+
+    ..Default::default()
+};
+```
+
+---
+
+## 8. Minimal complete example
+
+```rust,no_run
 use dgproto::{ApplicationMessage, ClientConfig, Connection, EncryptedData,
               MessageHandler, StaticKey, Tlv};
-use std::sync::Arc;
-use std::time::Duration;
+use std::{path::Path, sync::Arc, time::Duration};
 
 #[tokio::main]
-async fn main() -> Result<(), dgproto::Error> {
-    // --- Key setup (generate once; reload on subsequent runs) ---
-    let key = StaticKey::generate()?;
-    println!("Register this public key with the server:");
-    println!("{}", hex::encode(key.public()));
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // --- Key setup ---
+    let key = if Path::new("identity.key").exists() {
+        StaticKey::load(&std::fs::read("identity.key")?)?
+    } else {
+        let k = StaticKey::generate()?;
+        std::fs::write("identity.key", k.to_private_bytes().as_ref())?;
+        println!("Register this public key: {}", k.public_hex());
+        k
+    };
 
     // --- Message handler ---
     let handler: MessageHandler = Arc::new(|_conn, msg| {
@@ -197,8 +279,6 @@ async fn main() -> Result<(), dgproto::Error> {
     let config = ClientConfig {
         static_key:        key,
         handler:           Some(handler),
-        handler_queue:     64,
-        outbound_queue:    64,
         handshake_timeout: Duration::from_secs(10),
         write_timeout:     Duration::from_secs(10),
         ..Default::default()
@@ -212,7 +292,7 @@ async fn main() -> Result<(), dgproto::Error> {
         fields:           vec![Tlv::new(1, b"hello".as_ref())],
     })?;
 
-    // --- Close ---
+    // --- Graceful close ---
     conn.close().await?;
     Ok(())
 }
@@ -220,13 +300,13 @@ async fn main() -> Result<(), dgproto::Error> {
 
 ---
 
-## 7. Common errors
+## 9. Common errors
 
 | Error | Cause | Fix |
 |---|---|---|
 | `Error::Handshake` | Noise XX failed — wrong server key, server rejected public key, or network error. | Verify `server_static_hint` and that your public key is registered with the server. |
 | `Error::OutboundQueueFull` | The write loop is behind — `outbound_queue` capacity exceeded. | Increase `outbound_queue` in `ClientConfig`, or use `send_and_wait` for flow control. |
-| `Error::ConnectionClosed` | The connection has already terminated. | Check for terminal errors; reconnect if needed. |
+| `Error::ConnectionClosed` | The connection has already terminated. | Check for terminal errors with `wait_for_close()`; reconnect if needed. |
 | `Error::Authentication` | AEAD decryption failed — frame was tampered with or keys are mismatched. | This is a security event; log and close immediately. |
 | `Error::TransportClosed` | The TCP transport was closed by the peer (clean close at the OS level). | Reconnect after a backoff delay. |
 | `Error::Io(e)` | Raw OS-level I/O error (timeout, connection reset, broken pipe, etc.). | Inspect `e.kind()` to decide whether to retry; reconnect after backoff. |
@@ -235,6 +315,8 @@ async fn main() -> Result<(), dgproto::Error> {
 
 ## Next steps
 
+- [Connection lifecycle](connection-lifecycle.md) — reconnect patterns, keepalive, idle timeout, callbacks
+- [Key Management Guide](key-management.md) — persist, load, and rotate your static key
 - [Architecture overview](../architecture/overview.md) — module structure and data flow diagrams
 - [API reference (docs.rs)](https://docs.rs/dgproto) — full Rustdoc for all public types
 - [DGProto v1 specification](https://github.com/datagram-messenger/dgproto-go/blob/main/docs/protocol/dgproto-v1.md) — normative wire spec
