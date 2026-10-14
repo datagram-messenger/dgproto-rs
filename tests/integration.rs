@@ -850,3 +850,45 @@ async fn test_integration_on_disconnect_fires_on_error() {
     .await
     .expect("on_disconnect test timed out");
 }
+
+/// idle_timeout must not fire immediately after connect.
+///
+/// Regression test for BUG-1: `tokio::time::interval(d)` fires its first tick
+/// at t=0, causing an immediate `IdleTimeout` shutdown before any data arrives.
+/// The fix uses `interval_at(now + d, d)` so the first tick is deferred by `d`.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_integration_idle_timeout_does_not_fire_immediately() {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        let (server_priv, _server_pub) = generate_server_keypair();
+        let client_key = StaticKey::generate().expect("client StaticKey::generate");
+        let addr = spawn_echo_server(server_priv).await;
+
+        let config = ClientConfig {
+            static_key: client_key,
+            idle_timeout: Duration::from_millis(500),
+            handshake_timeout: Duration::from_secs(5),
+            write_timeout: Duration::from_secs(5),
+            ..Default::default()
+        };
+        let conn = Connection::connect(addr, config)
+            .await
+            .expect("Connection::connect");
+
+        // Immediately after connect the connection must be alive.
+        assert!(
+            !conn.is_closed(),
+            "connection must be alive right after connect"
+        );
+
+        // After 100 ms (well below the 500 ms idle_timeout) it must still be alive.
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        assert!(
+            !conn.is_closed(),
+            "connection must not idle-timeout within 100 ms of connect"
+        );
+
+        conn.abort();
+    })
+    .await
+    .expect("idle_timeout_does_not_fire_immediately timed out");
+}

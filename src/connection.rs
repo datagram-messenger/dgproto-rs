@@ -816,12 +816,14 @@ impl Connection {
         let mut idle_interval = if self.inner.config.idle_timeout.is_zero() {
             None
         } else {
-            Some(tokio::time::interval(self.inner.config.idle_timeout))
+            let d = self.inner.config.idle_timeout;
+            Some(tokio::time::interval_at(tokio::time::Instant::now() + d, d))
         };
         let mut keepalive_interval = if self.inner.config.keepalive_interval.is_zero() {
             None
         } else {
-            Some(tokio::time::interval(self.inner.config.keepalive_interval))
+            let d = self.inner.config.keepalive_interval;
+            Some(tokio::time::interval_at(tokio::time::Instant::now() + d, d))
         };
         let mut pong_deadline: Option<tokio::time::Instant> = None;
         let mut outstanding_nonce: u64 = 0;
