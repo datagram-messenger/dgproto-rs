@@ -118,8 +118,11 @@ pub struct ClientConfig {
     /// Default: 64.
     pub outbound_queue: usize,
 
-    /// Handler queue capacity (number of inbound messages buffered before
-    /// the handler is invoked). Default: 64.
+    /// Handler invocation mode. Default: 64 (reserved for future use).
+    ///
+    /// Currently the handler is invoked **synchronously** in the read loop —
+    /// a slow handler stalls all subsequent inbound messages on this connection.
+    /// Buffered/concurrent dispatch is planned for a future release.
     pub handler_queue: usize,
 
     /// Optional inbound message handler. If `None`, inbound application
