@@ -16,7 +16,13 @@
 //! - `test_integration_on_disconnect_fires_on_error` — on_disconnect callback is invoked
 //!   with Some(err) when the connection is aborted.
 
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
 
 use dgproto::{ClientConfig, Connection, EncryptedData, StaticKey, Tlv};
 use tokio::{
@@ -44,7 +50,7 @@ const SESSION_ID_LABEL: &[u8] = b"DGPv1 SessionID";
 // Message type bytes (wire values).
 const MSG_HANDSHAKE_INIT: u8 = 0x01;
 const MSG_HANDSHAKE_RESPONSE: u8 = 0x02;
-const MSG_ENCRYPTED_DATA: u8 = 0x03; // also HandshakeFinish on the wire
+const MSG_ENCRYPTED_DATA: u8 = 0x03;
 const MSG_PING_PONG: u8 = 0x04;
 const MSG_SESSION_CLOSE: u8 = 0x05;
 const MSG_REKEY_INIT: u8 = 0x08;
@@ -323,18 +329,22 @@ async fn run_echo_server(mut stream: TcpStream, server_private_key: [u8; 32]) {
     )
     .await;
 
-    // Flight 3: receive HandshakeFinish (type 0x03, zero session ID).
-    let (hdr3, payload3, _tag3, _pad3) = read_frame(&mut stream).await;
-    let (msg_type3, _, _, _, _) = parse_header(&hdr3);
-    eprintln!("[echo] flight3 hdr[0..8]: {:02x?}", &hdr3[..8]);
-    eprintln!(
-        "[echo] flight3: msg_type=0x{msg_type3:02x} payload_len={}",
-        payload3.len()
-    );
+    // Flight 3: receive HandshakeFinish (type 0x02, canonical handshake envelope).
+    let (hdr3, payload3, tag3, pad3) = read_frame(&mut stream).await;
+    let (msg_type3, session_id3, sequence3, payload_len3, pad_len3) = parse_header(&hdr3);
     assert_eq!(
-        msg_type3, MSG_ENCRYPTED_DATA,
-        "expected HandshakeFinish (0x03), got 0x{msg_type3:02x}"
+        msg_type3, MSG_HANDSHAKE_RESPONSE,
+        "expected HandshakeFinish (0x02), got 0x{msg_type3:02x}"
     );
+    assert_eq!(session_id3, [0u8; 16]);
+    assert_eq!(sequence3, 0);
+    assert_eq!(payload_len3, 64);
+    assert_eq!(pad_len3, 0);
+    assert!(
+        tag3.is_empty(),
+        "handshake finish must not carry an outer tag"
+    );
+    assert!(pad3.is_empty(), "handshake finish must not carry padding");
     // Noise message 3 = 64 bytes.
     assert_eq!(
         payload3.len(),
@@ -891,4 +901,101 @@ async fn test_integration_idle_timeout_does_not_fire_immediately() {
     })
     .await
     .expect("idle_timeout_does_not_fire_immediately timed out");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_lifecycle_handler_close_does_not_wait_for_own_read_loop() {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        let (server_priv, _) = generate_server_keypair();
+        let addr = spawn_echo_server(server_priv).await;
+        let calls = Arc::new(AtomicUsize::new(0));
+        let handler_calls = calls.clone();
+        let handler: dgproto::MessageHandler = Arc::new(move |conn, _| {
+            let handler_calls = handler_calls.clone();
+            Box::pin(async move {
+                handler_calls.fetch_add(1, Ordering::SeqCst);
+                conn.close().await
+            })
+        });
+        let mut config = loopback_config(StaticKey::generate().expect("client key"));
+        config.handler = Some(handler);
+        let conn = Connection::connect(addr, config).await.expect("connect");
+        conn.send_and_wait(EncryptedData {
+            stream_id: 1,
+            app_message_type: 1,
+            fields: vec![Tlv::new(1, b"close")],
+        })
+        .await
+        .expect("send");
+        assert!(conn.wait_for_close().await.is_none());
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+    })
+    .await
+    .expect("handler close timed out");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_lifecycle_handler_panic_completes_other_loops() {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        let (server_priv, _) = generate_server_keypair();
+        let addr = spawn_echo_server(server_priv).await;
+        let handler: dgproto::MessageHandler =
+            Arc::new(move |_, _| Box::pin(async move { panic!("handler panic") }));
+        let mut config = loopback_config(StaticKey::generate().expect("client key"));
+        config.handler = Some(handler);
+        let conn = Connection::connect(addr, config).await.expect("connect");
+        conn.send_and_wait(EncryptedData {
+            stream_id: 1,
+            app_message_type: 1,
+            fields: vec![Tlv::new(1, b"panic")],
+        })
+        .await
+        .expect("send");
+        assert!(conn.wait_for_close().await.is_some());
+    })
+    .await
+    .expect("handler panic timed out");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_lifecycle_on_disconnect_panic_cannot_block_completion() {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        let (server_priv, _) = generate_server_keypair();
+        let addr = spawn_echo_server(server_priv).await;
+        let calls = Arc::new(AtomicUsize::new(0));
+        let callback_calls = calls.clone();
+        let mut config = loopback_config(StaticKey::generate().expect("client key"));
+        config.on_disconnect = Some(Arc::new(move |_| {
+            callback_calls.fetch_add(1, Ordering::SeqCst);
+            panic!("on_disconnect panic");
+        }));
+        let conn = Connection::connect(addr, config).await.expect("connect");
+        conn.abort();
+        assert!(conn.wait_for_close().await.is_some());
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+    })
+    .await
+    .expect("on_disconnect panic timed out");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_lifecycle_on_connect_panic_rolls_back_started_loops() {
+    let (server_priv, _) = generate_server_keypair();
+    let addr = spawn_echo_server(server_priv).await;
+    let disconnects = Arc::new(AtomicUsize::new(0));
+    let callback_disconnects = disconnects.clone();
+    let mut config = loopback_config(StaticKey::generate().expect("client key"));
+    config.on_connect = Some(Arc::new(|_| panic!("on_connect panic")));
+    config.on_disconnect = Some(Arc::new(move |_| {
+        callback_disconnects.fetch_add(1, Ordering::SeqCst);
+    }));
+    let task = tokio::spawn(async move { Connection::connect(addr, config).await });
+    let join = tokio::time::timeout(Duration::from_secs(10), task)
+        .await
+        .expect("on_connect rollback timed out");
+    assert!(
+        join.is_err(),
+        "on_connect panic must propagate through JoinError"
+    );
+    assert_eq!(disconnects.load(Ordering::SeqCst), 1);
 }

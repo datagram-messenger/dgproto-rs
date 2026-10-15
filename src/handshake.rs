@@ -21,8 +21,8 @@
 //!    32-byte server ephemeral prefix + 64 Noise bytes = 96 bytes.
 //!    Noise message 2.
 //!
-//! 3. **Send** `HandshakeFinish` (type 0x03, zero session ID):
-//!    64-byte Noise message 3.
+//! 3. **Send** the 64-byte `HandshakeFinish` payload (Noise message 3) in a
+//!    `HandshakeResponse` frame (type 0x02, zero session ID and sequence).
 //!
 //! # Session ID derivation
 //!

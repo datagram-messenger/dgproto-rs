@@ -284,13 +284,9 @@ impl Session {
                 expire_grace_locked(&mut r);
             }
         } else {
-            // Previous-epoch frame: commit to the previous replay window and
-            // also decrement grace_remaining so that a flood of previous-epoch
-            // frames cannot hold the grace window open indefinitely.
+            // Previous-epoch frames have their own replay window but do not
+            // consume the grace budget, which is measured in current-epoch frames.
             r.previous_replay.commit(candidate.token)?;
-            if r.grace_remaining > 0 {
-                r.grace_remaining -= 1;
-            }
             expire_grace_locked(&mut r);
         }
         Ok(candidate.plaintext)
@@ -666,5 +662,91 @@ mod tests {
             matches!(err, Error::SequenceExhausted),
             "expected SequenceExhausted, got {err:?}"
         );
+    }
+
+    #[tokio::test]
+    async fn test_previous_epoch_frames_do_not_consume_current_epoch_grace_budget() {
+        let previous_key = [0x71u8; 32];
+        let current_key = [0x72u8; 32];
+        let session = Session::new(make_secrets([0x73u8; 32], current_key)).expect("session");
+        {
+            let mut recv = session.recv.lock().await;
+            recv.previous_codec = Some(Codec::new(&previous_key).expect("previous codec"));
+            recv.previous_replay = ReplayWindow::new();
+            recv.grace_remaining = 2;
+            recv.grace_until = Some(Instant::now() + REKEY_GRACE_PERIOD);
+        }
+
+        let previous_codec = Codec::new(&previous_key).expect("previous codec");
+        let current_codec = Codec::new(&current_key).expect("current codec");
+        let previous_one = previous_codec
+            .encrypt(MessageType::EncryptedData, [1u8; 16], 1, b"old-1", &[])
+            .expect("encrypt previous frame");
+        let previous_two = previous_codec
+            .encrypt(MessageType::EncryptedData, [1u8; 16], 2, b"old-2", &[])
+            .expect("encrypt previous frame");
+
+        assert_eq!(
+            session
+                .decrypt_frame(&previous_one)
+                .await
+                .expect("old frame 1"),
+            b"old-1"
+        );
+        assert_eq!(
+            session
+                .decrypt_frame(&previous_two)
+                .await
+                .expect("old frame 2"),
+            b"old-2"
+        );
+        assert_eq!(session.recv.lock().await.grace_remaining, 2);
+
+        let current_one = current_codec
+            .encrypt(MessageType::EncryptedData, [1u8; 16], 1, b"new-1", &[])
+            .expect("encrypt current frame");
+        session
+            .decrypt_frame(&current_one)
+            .await
+            .expect("first current frame");
+        assert_eq!(session.recv.lock().await.grace_remaining, 1);
+
+        let previous_boundary = previous_codec
+            .encrypt(
+                MessageType::EncryptedData,
+                [1u8; 16],
+                3,
+                b"old-boundary",
+                &[],
+            )
+            .expect("encrypt previous boundary frame");
+        session
+            .decrypt_frame(&previous_boundary)
+            .await
+            .expect("previous frame at grace boundary");
+        assert_eq!(session.recv.lock().await.grace_remaining, 1);
+
+        let current_two = current_codec
+            .encrypt(MessageType::EncryptedData, [1u8; 16], 2, b"new-2", &[])
+            .expect("encrypt current frame");
+        session
+            .decrypt_frame(&current_two)
+            .await
+            .expect("second current frame");
+        assert!(session.recv.lock().await.previous_codec.is_none());
+
+        let previous_expired = previous_codec
+            .encrypt(
+                MessageType::EncryptedData,
+                [1u8; 16],
+                4,
+                b"old-expired",
+                &[],
+            )
+            .expect("encrypt expired previous frame");
+        assert!(matches!(
+            session.decrypt_frame(&previous_expired).await,
+            Err(Error::Authentication)
+        ));
     }
 }
