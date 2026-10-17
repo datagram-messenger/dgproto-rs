@@ -102,9 +102,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-# fn load_server_key() -> Result<[u8; 32], Box<dyn std::error::Error>> {
-#     Ok([0; 32]) // Decode a trusted, provisioned key in a real application.
-# }
+fn load_server_key() -> Result<[u8; 32], Box<dyn std::error::Error>> {
+    let bytes = std::fs::read("server.pub")?;
+    bytes.try_into().map_err(|_| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "server.pub must contain exactly 32 bytes",
+        )
+        .into()
+    })
+}
 ```
 
 > [!WARNING]
