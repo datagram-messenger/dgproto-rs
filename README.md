@@ -75,7 +75,7 @@ use dgproto::{handler_fn, ApplicationMessage, ClientConfig, Connection,
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Generate once and persist securely; load the same 32 bytes on later runs.
+    // Provision securely once; this load requires exactly 32 private-key bytes.
     let client_key = StaticKey::load(&std::fs::read("identity.key")?)?;
     let trusted_server_public_key: [u8; 32] = load_server_key()?;
     let handler = handler_fn(|_connection, message| async move {
@@ -113,7 +113,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 > [!WARNING]
 > Generate the client key once, store it in an OS-backed secret store or a file
-> with restrictive permissions, and reload it on later runs. Never log or commit
+> protected by restrictive permissions, and reload it on later runs. The client
+> example creates a mode-`0o600` file on Unix; on Windows it requires a protected,
+> pre-provisioned 32-byte file and does not verify its ACL. Never log or commit
 > private key bytes. Provision the server's 32-byte static public key through a
 > trusted channel; `server_static_hint: None` would accept any server completing
 > a valid Noise XX handshake.

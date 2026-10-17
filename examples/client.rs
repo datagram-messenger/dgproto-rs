@@ -3,10 +3,12 @@
 //! Usage:
 //! `cargo run --example client -- <addr> <identity-key-file> <server-static-key-hex>`
 //!
-//! The identity file contains the client's raw 32-byte Noise private key. On the
-//! first run this example creates it; protect it with an OS credential store or
-//! restrictive filesystem permissions. The server key must be provisioned over
-//! a trusted channel and is always verified during the Noise XX handshake.
+//! The identity file contains the client's raw 32-byte Noise private key. On Unix,
+//! the first run creates it with mode `0o600`. On Windows, automatic creation is
+//! disabled: provision a protected, exactly 32-byte file or use an OS credential
+//! store. Existing files are loaded but their ACLs are not checked. The server key
+//! must be provisioned over a trusted channel and is always verified during the
+//! Noise XX handshake.
 
 use std::{
     env, fs, io,
@@ -100,12 +102,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn load_or_generate_key(path: &Path) -> Result<StaticKey, Box<dyn std::error::Error>> {
     match fs::read(path) {
         Ok(bytes) => Ok(StaticKey::load(&bytes)?),
+        #[cfg(windows)]
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "identity key file not found; on Windows, provision a protected exactly 32-byte key file or use an OS credential store",
+        )
+        .into()),
+        #[cfg(unix)]
         Err(error) if error.kind() == io::ErrorKind::NotFound => {
             let key = StaticKey::generate()?;
             let private = key.to_private_bytes();
             write_new_private_key(path, private.as_ref())?;
             eprintln!(
-                "created client identity; register public key {}",
+                "created client identity with mode 0600; register public key {}",
                 key.public_hex()
             );
             Ok(key)
@@ -114,17 +123,16 @@ fn load_or_generate_key(path: &Path) -> Result<StaticKey, Box<dyn std::error::Er
     }
 }
 
+#[cfg(unix)]
 fn write_new_private_key(path: &Path, private: &[u8]) -> io::Result<()> {
     use std::io::Write;
+    use std::os::unix::fs::OpenOptionsExt;
 
-    let mut options = fs::OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
-    }
-    let mut file = options.open(path)?;
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(path)?;
     file.write_all(private)?;
     file.sync_all()
 }
@@ -159,6 +167,79 @@ fn timed_out(operation: &str) -> io::Error {
 fn usage(reason: &str) -> io::Error {
     io::Error::new(
         io::ErrorKind::InvalidInput,
-        format!("{reason}; usage: client <addr> <identity-key-file> <server-static-key-hex>"),
+        format!(
+            "{reason}; usage: client <addr> <identity-key-file> <server-static-key-hex> (Windows requires a pre-provisioned protected 32-byte identity file)"
+        ),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{
+        path::PathBuf,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+
+    fn test_path(name: &str) -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock after Unix epoch")
+            .as_nanos();
+        env::temp_dir().join(format!(
+            "dgproto-client-{name}-{}-{nonce}",
+            std::process::id()
+        ))
+    }
+
+    #[test]
+    fn existing_key_must_be_exactly_32_bytes() {
+        let path = test_path("invalid-key");
+        fs::write(&path, [0u8; 31]).expect("write test key");
+
+        let result = load_or_generate_key(&path);
+
+        fs::remove_file(path).expect("remove test key");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn existing_32_byte_key_is_loaded() {
+        let path = test_path("existing-key");
+        let expected = [7u8; 32];
+        fs::write(&path, expected).expect("write test key");
+
+        let key = load_or_generate_key(&path).expect("load existing key");
+
+        fs::remove_file(path).expect("remove test key");
+        assert_eq!(key.to_private_bytes().as_ref(), &expected);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn missing_key_is_not_persisted_on_windows() {
+        let path = test_path("missing-key");
+
+        let error = load_or_generate_key(&path).expect_err("missing key must fail");
+
+        assert!(error
+            .to_string()
+            .contains("provision a protected exactly 32-byte key file"));
+        assert!(!path.exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn missing_key_is_created_once_with_owner_only_mode_on_unix() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let path = test_path("new-key");
+        let generated = load_or_generate_key(&path).expect("generate key");
+        let metadata = fs::metadata(&path).expect("read key metadata");
+        let loaded = load_or_generate_key(&path).expect("reload key");
+
+        fs::remove_file(path).expect("remove test key");
+        assert_eq!(metadata.permissions().mode() & 0o777, 0o600);
+        assert_eq!(loaded.to_private_bytes(), generated.to_private_bytes());
+    }
 }

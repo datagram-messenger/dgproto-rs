@@ -25,40 +25,31 @@ Minimum supported Rust version: **1.80**.
 ## 2. Set up your static key
 
 Your Noise static private key is your cryptographic identity on the network.
-Generate it **once**, persist it to disk, and reload it on every subsequent run.
+Generate it **once**, store it in an OS credential store or a protected file, and
+reload the same exactly 32 bytes on every subsequent run.
 
 ```rust
 use dgproto::StaticKey;
 use std::path::Path;
 
-fn load_or_generate(path: &Path) -> Result<StaticKey, Box<dyn std::error::Error>> {
-    if path.exists() {
-        let bytes = std::fs::read(path)?;
-        Ok(StaticKey::load(&bytes)?)
-    } else {
-        let key = StaticKey::generate()?;
-        std::fs::write(path, key.to_private_bytes().as_ref())?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
-        }
-        Ok(key)
-    }
+fn load_provisioned(path: &Path) -> Result<StaticKey, Box<dyn std::error::Error>> {
+    Ok(StaticKey::load(&std::fs::read(path)?)?)
 }
 ```
 
 Register the public key with the server before the first connection:
 
 ```rust
-let key = load_or_generate(Path::new("identity.key"))?;
+let key = load_provisioned(Path::new("identity.key"))?;
 println!("Register this public key: {}", key.public_hex());
 ```
 
 > [!IMPORTANT]
-> Never log, commit, or store the private key without restrictive file
-> permissions (Unix: `0o600`). See the [Key Management Guide](key-management.md)
-> for the full persist-and-reload pattern, platform paths, and rotation.
+> Never log, commit, or store the private key without restrictive protection.
+> The runnable client example creates a mode-`0o600` file on Unix. On Windows,
+> it refuses automatic creation and requires a protected, pre-provisioned
+> 32-byte file; it does not verify an existing file's ACL. See the
+> [Key Management Guide](key-management.md) for provisioning and rotation.
 
 ---
 
