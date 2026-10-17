@@ -1,6 +1,6 @@
 [package]
 name        = "dgproto"
-version     = "0.4.2"
+version     = "0.4.3"
 edition     = "2021"
 rust-version = "1.80"
 description = "Rust client library for the DGProto v1 secure transport protocol"
@@ -10,12 +10,12 @@ keywords    = ["dgproto", "noise", "protocol", "datagram", "client"]
 categories  = ["network-programming", "cryptography"]
 readme      = "README.md"
 
-# Only lib — no binary targets. See AGENTS.md §11.
+# Only lib вЂ” no binary targets. See AGENTS.md В§11.
 [lib]
 name = "dgproto"
 path = "src/lib.rs"
 
-# ── Runtime dependencies ──────────────────────────────────────────────────────
+# в”Ђв”Ђ Runtime dependencies в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 [dependencies]
 
@@ -30,7 +30,7 @@ chacha20poly1305 = "0.10"
 hmac = "0.12"
 sha2 = "0.10"
 
-# Async runtime — TCP transport, timers, sync primitives.
+# Async runtime вЂ” TCP transport, timers, sync primitives.
 tokio = { version = "1", features = [
     "net",
     "io-util",
@@ -46,7 +46,7 @@ tokio-util = { version = "0.7", features = ["rt"] }
 # Zero-copy buffer management for transport read buffers.
 bytes = "1"
 
-# Ergonomic error derive — used only in error.rs.
+# Ergonomic error derive вЂ” used only in error.rs.
 thiserror = "1"
 
 # Zeroize key material on drop.
@@ -56,7 +56,7 @@ zeroize = { version = "1", features = ["derive"] }
 subtle = "2"
 
 # Cryptographically secure random number generation (OsRng for padding).
-# rand_core is already a transitive dependency via chacha20poly1305 → aead →
+# rand_core is already a transitive dependency via chacha20poly1305 в†’ aead в†’
 # crypto-common; we declare it directly to make the dependency explicit and
 # to use OsRng in session.rs without relying on transitive re-exports.
 rand_core = { version = "0.6", features = ["getrandom"] }
@@ -64,7 +64,7 @@ rand_core = { version = "0.6", features = ["getrandom"] }
 # X25519 key derivation (transitive dep via snow, but we need it directly for StaticKey::load).
 curve25519-dalek = { version = "4", default-features = false, features = ["alloc"] }
 
-# ── Dev / test dependencies ───────────────────────────────────────────────────
+# в”Ђв”Ђ Dev / test dependencies в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 [dev-dependencies]
 
@@ -78,7 +78,7 @@ hex = "0.4"
 # Async test macro.
 tokio = { version = "1", features = ["full", "test-util"] }
 
-# ── Fuzz ─────────────────────────────────────────────────────────────────────
+# в”Ђв”Ђ Fuzz в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 # cargo-fuzz targets live in fuzz/fuzz_targets/.
 # Run: cargo +nightly fuzz run fuzz_header -- -max_total_time=60
