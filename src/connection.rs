@@ -794,6 +794,10 @@ impl Connection {
                     }
                 }
                 MessageType::SessionClose => {
+                    if let Err(e) = validate_session_close_payload(&plaintext) {
+                        self.shutdown(Some(e));
+                        return;
+                    }
                     self.shutdown(None);
                     return;
                 }
@@ -1053,6 +1057,10 @@ fn app_msg_to_wire(msg: &ApplicationMessage) -> Result<(MessageType, Vec<u8>), E
     }
 }
 
+fn validate_session_close_payload(plaintext: &[u8]) -> Result<(), Error> {
+    SessionClose::unmarshal_binary(plaintext).map(|_| ())
+}
+
 fn parse_inbound(frame: &Frame, plaintext: &[u8]) -> Result<ApplicationMessage, Error> {
     match frame.header.msg_type {
         MessageType::EncryptedData => Ok(ApplicationMessage::EncryptedData(
@@ -1080,6 +1088,18 @@ mod handshake_envelope_tests {
             tag: [0u8; crate::AEAD_TAG_SIZE],
             padding: vec![],
         }
+    }
+
+    #[test]
+    fn malformed_session_close_payload_is_rejected() {
+        assert!(matches!(
+            validate_session_close_payload(&[]),
+            Err(Error::MessageTooShort)
+        ));
+        assert!(matches!(
+            validate_session_close_payload(&[0xff, 0xff]),
+            Err(Error::InvalidCloseCode)
+        ));
     }
 
     #[test]
