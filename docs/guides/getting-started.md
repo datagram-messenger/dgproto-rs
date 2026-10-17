@@ -25,40 +25,31 @@ Minimum supported Rust version: **1.80**.
 ## 2. Set up your static key
 
 Your Noise static private key is your cryptographic identity on the network.
-Generate it **once**, persist it to disk, and reload it on every subsequent run.
+Generate it **once**, store it in an OS credential store or a protected file, and
+reload the same exactly 32 bytes on every subsequent run.
 
 ```rust
 use dgproto::StaticKey;
 use std::path::Path;
 
-fn load_or_generate(path: &Path) -> Result<StaticKey, Box<dyn std::error::Error>> {
-    if path.exists() {
-        let bytes = std::fs::read(path)?;
-        Ok(StaticKey::load(&bytes)?)
-    } else {
-        let key = StaticKey::generate()?;
-        std::fs::write(path, key.to_private_bytes().as_ref())?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
-        }
-        Ok(key)
-    }
+fn load_provisioned(path: &Path) -> Result<StaticKey, Box<dyn std::error::Error>> {
+    Ok(StaticKey::load(&std::fs::read(path)?)?)
 }
 ```
 
 Register the public key with the server before the first connection:
 
 ```rust
-let key = load_or_generate(Path::new("identity.key"))?;
+let key = load_provisioned(Path::new("identity.key"))?;
 println!("Register this public key: {}", key.public_hex());
 ```
 
 > [!IMPORTANT]
-> Never log, commit, or store the private key without restrictive file
-> permissions (Unix: `0o600`). See the [Key Management Guide](key-management.md)
-> for the full persist-and-reload pattern, platform paths, and rotation.
+> Never log, commit, or store the private key without restrictive protection.
+> The runnable client example creates a mode-`0o600` file on Unix. On Windows,
+> it refuses automatic creation and requires a protected, pre-provisioned
+> 32-byte file; it does not verify an existing file's ACL. See the
+> [Key Management Guide](key-management.md) for provisioning and rotation.
 
 ---
 
@@ -68,36 +59,31 @@ Define the message handler **before** building `ClientConfig` — the handler is
 a field of `ClientConfig` and is passed directly to `Connection::connect`.
 
 ```rust
-use dgproto::{ApplicationMessage, ClientConfig, Connection, MessageHandler};
-use std::sync::Arc;
-use std::time::Duration;
+use dgproto::{handler_fn, ApplicationMessage, ClientConfig, Connection};
 
-// Step 1 — define what to do with incoming messages.
 // The handler is called serially for each ApplicationMessage in arrival order.
-let handler: MessageHandler = Arc::new(|_conn, msg| {
-    Box::pin(async move {
-        match msg {
-            ApplicationMessage::EncryptedData(data) => {
-                println!(
-                    "[recv] stream={} type=0x{:02x} fields={}",
-                    data.stream_id,
-                    data.app_message_type,
-                    data.fields.len()
-                );
-                for field in &data.fields {
-                    println!("  tlv type={} len={}", field.type_, field.value.len());
-                }
+let handler = handler_fn(|_conn, msg| async move {
+    match msg {
+        ApplicationMessage::EncryptedData(data) => {
+            println!(
+                "[recv] stream={} type=0x{:02x} fields={}",
+                data.stream_id,
+                data.app_message_type,
+                data.fields.len()
+            );
+            for field in &data.fields {
+                println!("  tlv type={} len={}", field.type_, field.value.len());
             }
-            ApplicationMessage::SessionClose(close) => {
-                println!("[close] {:?}: {}", close.code, close.reason);
-            }
-            ApplicationMessage::ErrorMessage(err) => {
-                eprintln!("[error] 0x{:02x}: {}", err.code, err.reason);
-            }
-            ApplicationMessage::Ack(_) => { /* handle or ignore */ }
         }
-        Ok(())
-    })
+        ApplicationMessage::SessionClose(close) => {
+            println!("[close] {:?}: {}", close.code, close.reason);
+        }
+        ApplicationMessage::ErrorMessage(err) => {
+            eprintln!("[error] 0x{:02x}: {}", err.code, err.reason);
+        }
+        ApplicationMessage::Ack(_) => { /* normally ignore without explicit flow control */ }
+    }
+    Ok(())
 });
 
 // Step 2 — build the config, passing the handler and all other options.
@@ -109,12 +95,7 @@ let config = ClientConfig {
     // If None, any server completing a valid Noise XX handshake is accepted.
     server_static_hint: Some(server_public_key_bytes),
 
-    handshake_timeout: Duration::from_secs(10),
-    write_timeout:     Duration::from_secs(10),
-    // Must be greater than zero; zero returns
-    // Error::InvalidOutboundQueueCapacity before dialing.
-    outbound_queue:    64,
-    handler_queue:     64,
+    // Use the safe queue and timeout defaults until measurements justify tuning.
     ..Default::default()
 };
 
@@ -248,9 +229,9 @@ let config = ClientConfig {
 ## 8. Minimal complete example
 
 ```rust,no_run
-use dgproto::{ApplicationMessage, ClientConfig, Connection, EncryptedData,
-              MessageHandler, StaticKey, Tlv};
-use std::{path::Path, sync::Arc, time::Duration};
+use dgproto::{handler_fn, ApplicationMessage, ClientConfig, Connection,
+              EncryptedData, StaticKey, Tlv};
+use std::path::Path;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -265,25 +246,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // --- Message handler ---
-    let handler: MessageHandler = Arc::new(|_conn, msg| {
-        Box::pin(async move {
-            if let ApplicationMessage::EncryptedData(data) = msg {
-                for field in &data.fields {
-                    if let Ok(text) = std::str::from_utf8(&field.value) {
-                        println!("[recv] tlv={}: {}", field.type_, text);
-                    }
+    let handler = handler_fn(|_conn, msg| async move {
+        if let ApplicationMessage::EncryptedData(data) = msg {
+            for field in &data.fields {
+                if let Ok(text) = std::str::from_utf8(&field.value) {
+                    println!("[recv] tlv={}: {}", field.type_, text);
                 }
             }
-            Ok(())
-        })
+        }
+        Ok(())
     });
 
     // --- Connect ---
     let config = ClientConfig {
-        static_key:        key,
-        handler:           Some(handler),
-        handshake_timeout: Duration::from_secs(10),
-        write_timeout:     Duration::from_secs(10),
+        static_key: key,
+        server_static_hint: Some(server_public_key_bytes),
+        handler: Some(handler),
         ..Default::default()
     };
     let conn = Connection::connect("127.0.0.1:8090", config).await?;

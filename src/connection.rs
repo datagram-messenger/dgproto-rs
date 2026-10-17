@@ -81,13 +81,39 @@ use crate::{
 // ── Public types ──────────────────────────────────────────────────────────────
 
 /// Configuration for a client connection.
+///
+/// Start with [`Default`] so queue and timeout defaults evolve safely, then set
+/// the persistent client identity and the known server key.
+///
+/// # Security
+///
+/// `server_static_hint: None` accepts any server that completes a valid Noise XX
+/// handshake. Production clients should set it to a previously provisioned,
+/// known server static public key.
+///
+/// # Examples
+///
+/// ```rust
+/// use dgproto::{ClientConfig, StaticKey};
+///
+/// # fn config(client_private: &[u8; 32], known_server_key: [u8; 32]) -> Result<ClientConfig, dgproto::Error> {
+/// let config = ClientConfig {
+///     static_key: StaticKey::load(client_private)?,
+///     server_static_hint: Some(known_server_key),
+///     ..Default::default()
+/// };
+/// # Ok(config)
+/// # }
+/// ```
 #[derive(Clone)]
 pub struct ClientConfig {
     /// Client Noise static identity key.
     pub static_key: StaticKey,
 
-    /// Optional server static public key for pre-authentication verification.
-    /// If `None`, any server that completes a valid Noise handshake is accepted.
+    /// Optional server static public key for handshake identity verification.
+    ///
+    /// `None` accepts any server that completes a valid Noise XX handshake.
+    /// Production clients should provide a known server static public key.
     pub server_static_hint: Option<[u8; 32]>,
 
     /// Maximum time allowed for the Noise XX handshake to complete.
@@ -115,15 +141,17 @@ pub struct ClientConfig {
     /// duration. Default: `2 * keepalive_interval`.
     pub keepalive_timeout: Duration,
 
-    /// Outbound channel capacity (number of queued messages).
-    /// Default: 64.
+    /// Outbound channel capacity (number of queued messages). Default: 64.
+    ///
+    /// Keep the default unless application load and backpressure measurements
+    /// justify tuning it. A full queue makes [`Connection::send`] fail with
+    /// [`Error::OutboundQueueFull`].
     pub outbound_queue: usize,
 
-    /// Handler invocation mode. Default: 64 (reserved for future use).
+    /// Reserved handler-dispatch setting. Default: 64.
     ///
-    /// Currently the handler is invoked **synchronously** in the read loop —
-    /// a slow handler stalls all subsequent inbound messages on this connection.
-    /// Buffered/concurrent dispatch is planned for a future release.
+    /// This is not currently a parallel queue: the handler runs serially in the
+    /// read loop, so changing this value has no effect in this release.
     pub handler_queue: usize,
 
     /// Optional inbound message handler. If `None`, inbound application
@@ -240,6 +268,20 @@ impl From<SessionClose> for ApplicationMessage {
 /// Handler for inbound application messages.
 ///
 /// Called serially per connection. Returning `Err` closes the connection.
+/// [`handler_fn`] is the ergonomic way to create one from an async closure.
+///
+/// # Examples
+///
+/// ```rust
+/// use dgproto::{handler_fn, ApplicationMessage, MessageHandler};
+///
+/// let handler: MessageHandler = handler_fn(|_connection, message| async move {
+///     if let ApplicationMessage::EncryptedData(data) = message {
+///         println!("received {} TLVs", data.fields.len());
+///     }
+///     Ok(())
+/// });
+/// ```
 pub type MessageHandler = Arc<
     dyn Fn(
             Arc<Connection>,
@@ -249,6 +291,15 @@ pub type MessageHandler = Arc<
         + Send
         + Sync,
 >;
+
+/// Adapts an async closure into a [`MessageHandler`].
+pub fn handler_fn<F, Fut>(handler: F) -> MessageHandler
+where
+    F: Fn(Arc<Connection>, ApplicationMessage) -> Fut + Send + Sync + 'static,
+    Fut: std::future::Future<Output = Result<(), Error>> + Send + 'static,
+{
+    Arc::new(move |connection, message| Box::pin(handler(connection, message)))
+}
 
 // ── Internal types ────────────────────────────────────────────────────────────
 
@@ -505,10 +556,26 @@ impl Connection {
 
     // ── Public API ────────────────────────────────────────────────────────────
 
-    /// Enqueue `msg` into the bounded outbound channel.
+    /// Enqueue `msg` into the bounded outbound channel without blocking.
     ///
-    /// Returns immediately. Does not wait for the frame to be written.
-    /// Returns `Err(Error::OutboundQueueFull)` if the channel is full.
+    /// Success only means the message was queued locally. It does not wait for a
+    /// TCP write, peer receipt, an [`Ack`], or application processing. Returns
+    /// [`Error::OutboundQueueFull`] if the bounded queue is full.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use dgproto::{Connection, EncryptedData, Tlv};
+    ///
+    /// # fn send_one(connection: &Connection) -> Result<(), dgproto::Error> {
+    /// connection.send(EncryptedData {
+    ///     stream_id: 1,
+    ///     app_message_type: 1,
+    ///     fields: vec![Tlv::new(1, b"hello")],
+    /// })?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn send(&self, msg: impl Into<ApplicationMessage>) -> Result<(), Error> {
         self.send_padded(msg, 0)
     }
@@ -586,7 +653,18 @@ impl Connection {
         rx.await.map_err(|_| Error::ConnectionClosed)?
     }
 
-    /// Initiate a graceful `SessionClose` exchange and wait for completion.
+    /// Initiate a graceful `SessionClose` exchange and wait for local teardown.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use dgproto::Connection;
+    ///
+    /// # async fn shutdown(connection: &Connection) -> Result<(), dgproto::Error> {
+    /// connection.close().await?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn close(&self) -> Result<(), Error> {
         let (tx, rx) = oneshot::channel();
         let req = CloseRequest {

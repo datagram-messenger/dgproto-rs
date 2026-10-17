@@ -33,44 +33,18 @@ supported platform.
 
 ## Persisting to disk
 
-Export the raw 32-byte private key and write it to a file with restrictive
-permissions. The returned `Zeroizing<[u8; 32]>` wrapper automatically zeroes
-the stack copy when it is dropped.
+Exporting produces the raw 32-byte private key in a `Zeroizing<[u8; 32]>`
+wrapper, which zeroes that copy when dropped. Persistence must apply restrictive
+protection at creation time: use `create_new` with mode `0o600` on Unix. On
+Windows, use an OS credential store or provision a file with a restrictive DACL
+through an appropriate Windows API; writing into a user-profile directory alone
+does not verify or guarantee a restrictive ACL.
 
-```rust
-use std::fs;
-use dgproto::StaticKey;
-
-fn save_key(key: &StaticKey, path: &std::path::Path) -> std::io::Result<()> {
-    let private_bytes = key.to_private_bytes(); // Zeroizing<[u8; 32]>
-
-    // Write the raw bytes.
-    fs::write(path, private_bytes.as_ref())?;
-
-    // Restrict permissions so only the owner can read the file.
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
-    }
-
-    // On Windows, use ACLs or the OS credential store (DPAPI) for equivalent
-    // protection. The simplest approach is to store the file inside a
-    // user-profile directory that is not world-readable by default.
-
-    Ok(())
-}
-```
-
-**Platform-specific paths** (recommended locations):
-
-| Platform | Suggested path |
-|---|---|
-| Linux / macOS | `~/.config/<app>/identity.key` |
-| Windows | `%APPDATA%\<app>\identity.key` |
-
-Use the [`dirs`](https://crates.io/crates/dirs) crate to resolve these paths
-portably at runtime.
+The runnable client example deliberately does not add a Windows API dependency.
+It therefore creates a new key file only on Unix. On Windows, a missing file is
+an error and the user must provide a protected, exactly 32-byte key file (or
+adapt the application to load from an OS credential store). Existing Windows
+files are loaded, but the example does not inspect their ACLs.
 
 ---
 
@@ -80,24 +54,9 @@ portably at runtime.
 use std::fs;
 use dgproto::StaticKey;
 
-fn load_or_generate(path: &std::path::Path) -> Result<StaticKey, Box<dyn std::error::Error>> {
-    if path.exists() {
-        // Load the existing key.
-        let bytes = fs::read(path)?;
-        let key = StaticKey::load(&bytes)?;
-        Ok(key)
-    } else {
-        // First run: generate and persist.
-        let key = StaticKey::generate()?;
-        let private_bytes = key.to_private_bytes();
-        fs::write(path, private_bytes.as_ref())?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
-        }
-        Ok(key)
-    }
+fn load_provisioned(path: &std::path::Path) -> Result<StaticKey, Box<dyn std::error::Error>> {
+    let bytes = fs::read(path)?;
+    Ok(StaticKey::load(&bytes)?) // rejects any length other than 32 bytes
 }
 ```
 
@@ -110,7 +69,7 @@ so it can be added to the allowlist. Use `public_hex()` to get a printable
 representation:
 
 ```rust
-let key = load_or_generate(&key_path)?;
+let key = load_provisioned(&key_path)?;
 println!("Client public key: {}", key.public_hex());
 // → "a3f1c2...64 lowercase hex chars"
 ```

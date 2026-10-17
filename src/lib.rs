@@ -97,7 +97,7 @@ pub use error::Error;
 pub use handshake::StaticKey;
 
 // Connection and configuration
-pub use connection::{ApplicationMessage, ClientConfig, Connection, MessageHandler};
+pub use connection::{handler_fn, ApplicationMessage, ClientConfig, Connection, MessageHandler};
 
 // Application messages (L4)
 pub use messages::{Ack, CloseCode, EncryptedData, ErrorMessage, SessionClose};

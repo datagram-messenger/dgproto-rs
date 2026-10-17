@@ -65,23 +65,30 @@ The minimum supported Rust version (MSRV) is **1.80**.
 
 ## Quick start
 
-This complete example generates a client key, connects, writes one application
-message, and closes the session:
+This abbreviated workflow loads a persistent client identity, verifies the
+provisioned server key, receives messages with `handler_fn`, sends one
+application message, and closes the session:
 
 ```rust
-use dgproto::{ClientConfig, Connection, EncryptedData, StaticKey, Tlv};
+use dgproto::{handler_fn, ApplicationMessage, ClientConfig, Connection,
+              EncryptedData, StaticKey, Tlv};
 
 #[tokio::main]
-async fn main() -> Result<(), dgproto::Error> {
-    let client_key = StaticKey::generate()?;
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Provision securely once; this load requires exactly 32 private-key bytes.
+    let client_key = StaticKey::load(&std::fs::read("identity.key")?)?;
+    let trusted_server_public_key: [u8; 32] = load_server_key()?;
+    let handler = handler_fn(|_connection, message| async move {
+        if let ApplicationMessage::EncryptedData(data) = message {
+            println!("received {} TLVs", data.fields.len());
+        }
+        Ok(())
+    });
 
     let config = ClientConfig {
         static_key: client_key,
-
-        // Replace None with Some(trusted_server_public_key) when the expected
-        // server key has been provisioned through a trusted channel.
-        server_static_hint: None,
-
+        server_static_hint: Some(trusted_server_public_key),
+        handler: Some(handler),
         ..Default::default()
     };
 
@@ -95,24 +102,29 @@ async fn main() -> Result<(), dgproto::Error> {
         })
         .await?;
 
-    connection.close().await
+    connection.close().await?;
+    Ok(())
 }
+
+# fn load_server_key() -> Result<[u8; 32], Box<dyn std::error::Error>> {
+#     Ok([0; 32]) // Decode a trusted, provisioned key in a real application.
+# }
 ```
 
 > [!WARNING]
-> `StaticKey::generate()` is shown inline to keep the example self-contained.
-> For a persistent client identity, generate once, store the private bytes in an
-> OS-backed secret store or a file with restrictive permissions, and reload them
-> with `StaticKey::load()` on later runs. Never log or commit private key bytes.
->
-> `server_static_hint: None` accepts any server static key that completes the
-> Noise XX handshake. Where server identity matters, provision the expected
-> 32-byte public key through a trusted channel and set
-> `server_static_hint: Some(trusted_server_public_key)`.
+> Generate the client key once, store it in an OS-backed secret store or a file
+> protected by restrictive permissions, and reload it on later runs. The client
+> example creates a mode-`0o600` file on Unix; on Windows it requires a protected,
+> pre-provisioned 32-byte file and does not verify its ACL. Never log or commit
+> private key bytes. Provision the server's 32-byte static public key through a
+> trusted channel; `server_static_hint: None` would accept any server completing
+> a valid Noise XX handshake.
 
 The server must be running and its admission policy must allow the client's
 public key. See [Getting started] and [Key management] for persistence,
-registration, inbound handlers, and operational setup.
+registration, inbound handlers, graceful shutdown, and operational setup. See
+[Connection lifecycle] for using `wait_for_close()` to drive an application-owned
+reconnect loop; the crate does not reconnect automatically.
 
 ## Connection lifecycle
 
