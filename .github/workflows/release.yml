@@ -124,7 +124,13 @@ jobs:
         run: |
           TAG="${GITHUB_REF_NAME}"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "GitHub Release $TAG already exists; nothing to do."
+            IS_DRAFT=$(gh release view "$TAG" --json isDraft --jq '.isDraft')
+            if [ "$IS_DRAFT" = "true" ]; then
+              echo "Publishing existing draft release $TAG as Latest."
+              gh release edit "$TAG" --draft=false --latest --title "$TAG"
+            else
+              echo "GitHub Release $TAG is already published; nothing to do."
+            fi
           else
-            gh release create "$TAG" --verify-tag --generate-notes --title "$TAG"
+            gh release create "$TAG" --verify-tag --generate-notes --title "$TAG" --latest
           fi
