@@ -10,10 +10,14 @@ keywords    = ["dgproto", "noise", "protocol", "datagram", "client"]
 categories  = ["network-programming", "cryptography"]
 readme      = "README.md"
 
-# Only lib — no binary targets. See AGENTS.md §11.
+# Library crate with an explicit runnable client example; no production binary.
 [lib]
 name = "dgproto"
 path = "src/lib.rs"
+
+[[example]]
+name = "client"
+path = "examples/client.rs"
 
 # ── Runtime dependencies ──────────────────────────────────────────────────────
 
