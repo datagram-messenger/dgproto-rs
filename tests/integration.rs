@@ -598,14 +598,16 @@ async fn test_integration_handshake_and_echo() {
     let received = Arc::new(tokio::sync::Mutex::new(Vec::<Vec<Tlv>>::new()));
     let received2 = received.clone();
 
-    let handler: dgproto::MessageHandler = Arc::new(move |_conn, msg| {
+    let handler = dgproto::handler_fn(move |_conn, msg| {
         let received3 = received2.clone();
-        Box::pin(async move {
+        async move {
             if let dgproto::connection::ApplicationMessage::EncryptedData(ed) = msg {
                 received3.lock().await.push(ed.fields.clone());
+                Ok(())
+            } else {
+                Err(dgproto::Error::MessageType)
             }
-            Ok(())
-        })
+        }
     });
 
     let config = ClientConfig {

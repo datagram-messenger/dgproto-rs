@@ -250,6 +250,15 @@ pub type MessageHandler = Arc<
         + Sync,
 >;
 
+/// Adapts an async closure into a [`MessageHandler`].
+pub fn handler_fn<F, Fut>(handler: F) -> MessageHandler
+where
+    F: Fn(Arc<Connection>, ApplicationMessage) -> Fut + Send + Sync + 'static,
+    Fut: std::future::Future<Output = Result<(), Error>> + Send + 'static,
+{
+    Arc::new(move |connection, message| Box::pin(handler(connection, message)))
+}
+
 // ── Internal types ────────────────────────────────────────────────────────────
 
 /// A message queued for the write loop.
