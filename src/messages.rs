@@ -193,9 +193,11 @@ impl HandshakeFinish {
 /// Wire: `[stream_id u16 LE][app_message_type u8][reserved u8=0][fields TLV...]`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EncryptedData {
-    /// Logical stream identifier within the session.
+    /// Application-defined logical stream identifier within the session.
+    /// DGProto transports this value without assigning stream semantics.
     pub stream_id: u16,
     /// Application-defined message type byte.
+    /// DGProto transports this value without interpreting it.
     pub app_message_type: u8,
     /// Application-layer TLV fields. Each [`Tlv`] carries a typed payload byte
     /// (`type_`) and a value. The wire format is the encoded TLV sequence;
@@ -283,7 +285,12 @@ impl PingPong {
     }
 }
 
-/// An acknowledgement message (type 0x06).
+/// A protocol-level acknowledgement message (type 0x06).
+///
+/// `Ack` identifies received DGProto frame sequences. Applications normally
+/// ignore it unless they implement explicit flow control; it is not implied by
+/// [`Connection::send`](crate::Connection::send) or
+/// [`Connection::send_and_wait`](crate::Connection::send_and_wait).
 ///
 /// Wire: `[count u8][sequence u64 LE] × count`.
 #[derive(Debug, Clone, PartialEq, Eq)]
