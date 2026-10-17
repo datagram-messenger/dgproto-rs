@@ -12,52 +12,48 @@
 
 </div>
 
-`dgproto` implements the client/initiator side of DGProto v1 over asynchronous
-Tokio TCP. It packages framing, typed messages, a Noise XX handshake, encrypted
-sessions, replay handling, rekeying, and connection lifecycle management behind
-a small Rust API. It is a library crate: applications retain control of key
-provisioning, authorization, reconnect policy, and message semantics.
+`dgproto` is the client-side building block for applications that speak
+DGProto v1. It combines the wire format, typed messages, Noise XX handshake,
+encrypted sessions, replay protection, rekeying, and connection lifecycle in a
+small asynchronous API built on Tokio.
 
-> [!IMPORTANT]
-> **Compatibility status**
->
-> - **Crate:** `dgproto` 0.4.2
-> - **Protocol:** DGProto v1 **draft**, Implementation Track
-> - The crate version and protocol version are independent.
-> - The wire specification may still change while the protocol remains a draft.
-> - This crate implements the client/initiator role; the normative specification
->   and server implementation live in [`dgproto-go`].
+The crate deliberately stops at the transport boundary. Your application keeps
+control of identity provisioning, authorization, reconnect policy, and message
+semantics.
 
-## Capabilities
+## Highlights
 
-- Asynchronous TCP transport on Tokio.
-- Three-flight `Noise_XX_25519_ChaChaPoly_SHA256` initiator handshake.
-- ChaCha20-Poly1305 authenticated encryption for session frames.
-- Typed `EncryptedData`, `Ack`, `ErrorMessage`, and `SessionClose` messages.
-- Application fields encoded as aligned TLVs, with unknown fields preserved on
-  supported receive paths.
-- Per-direction sequence numbers and replay-window enforcement.
-- Directional epoch rekeying with bounded previous-key grace handling.
-- Bounded outbound queue, write confirmation, explicit padding, keepalive, idle
-  timeout, lifecycle callbacks, and graceful or immediate shutdown.
-- Shared wire-vector tests against data maintained with the Go implementation.
+- **Secure by construction** — Noise XX establishes directional secrets;
+  ChaCha20-Poly1305 authenticates encrypted session frames.
+- **Protocol-complete client core** — framing, aligned TLVs, typed messages,
+  sequencing, replay enforcement, padding, and epoch rekeying.
+- **Production-oriented lifecycle** — bounded backpressure, write confirmation,
+  keepalive, idle timeout, callbacks, and graceful or immediate shutdown.
+- **Interoperability tested** — shared wire vectors and oracle tests track the
+  reference Go implementation.
+- **Focused API** — one client/initiator library with no server framework or
+  application policy hidden behind it.
 
-## MVP scope
+## Project status
 
-The current implementation intentionally targets a narrow interoperability
-baseline:
+| | |
+|---|---|
+| Crate | `dgproto` **0.5.0** |
+| Protocol | DGProto v1 draft — Implementation Track |
+| Role | Client / initiator |
+| Transport | Asynchronous TCP on Tokio |
+| MSRV | Rust 1.80 |
 
-- **Included:** client/initiator library, Tokio TCP, DGProto v1 framing and typed
-  messages, Noise XX, encrypted sessions, replay protection, rekeying, optional
-  padding, and connection lifecycle management.
-- **Not included:** a server/responder, QUIC, UDP, WebSocket, Noise IK, resumption
-  tickets, 0-RTT, transport obfuscation, or an application authorization system.
+Crate releases and protocol revisions are versioned independently. DGProto v1
+is still a draft, so wire compatibility may change before the specification is
+stabilized. The [DGProto v1 specification] and reference server live in
+[`dgproto-go`].
 
-## Install
+## Installation
 
 ```toml
 [dependencies]
-dgproto = "0.4.2"
+dgproto = "0.5.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
