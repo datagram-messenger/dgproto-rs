@@ -126,6 +126,7 @@ impl Session {
         let send_codec = Codec::new(&secrets.send_key)?;
         let recv_codec = Codec::new(&secrets.receive_key)?;
         let now = Instant::now();
+        crate::keylog::write(&secrets.session_id, &secrets.send_key, &secrets.receive_key);
         Ok(Self {
             session_id: secrets.session_id,
             send: Mutex::new(SendState {

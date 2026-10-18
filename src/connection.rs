@@ -1173,8 +1173,10 @@ mod handshake_envelope_tests {
 
     #[test]
     fn rejects_zero_handler_queue_capacity() {
-        let mut config = ClientConfig::default();
-        config.handler_queue = 0;
+        let config = ClientConfig {
+            handler_queue: 0,
+            ..ClientConfig::default()
+        };
 
         assert_eq!(
             validate_config(&config),

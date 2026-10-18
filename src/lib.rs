@@ -71,6 +71,7 @@ pub mod handshake;
 pub(crate) mod header;
 #[cfg(fuzzing)]
 pub mod header;
+pub(crate) mod keylog;
 #[cfg(not(fuzzing))]
 pub(crate) mod messages;
 #[cfg(fuzzing)]
