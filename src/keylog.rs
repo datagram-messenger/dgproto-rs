@@ -81,7 +81,8 @@ pub(crate) fn write(
         format!("DGPROTO_SESSION_KEY {sid} send 1 {sk}\nDGPROTO_SESSION_KEY {sid} recv 1 {rk}\n");
 
     // Ignore write errors — keylog is best-effort debug output.
-    let _ = (&w.file).write_all(line.as_bytes());
+    let mut f: &File = &w.file;
+    let _ = f.write_all(line.as_bytes());
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
