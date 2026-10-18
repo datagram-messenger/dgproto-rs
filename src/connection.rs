@@ -1110,6 +1110,9 @@ fn validate_config(config: &ClientConfig) -> Result<(), Error> {
     if config.outbound_queue == 0 {
         return Err(Error::InvalidOutboundQueueCapacity);
     }
+    if config.handler_queue == 0 {
+        return Err(Error::InvalidHandlerQueueCapacity);
+    }
     Ok(())
 }
 
@@ -1166,6 +1169,17 @@ mod handshake_envelope_tests {
             tag: [0u8; crate::AEAD_TAG_SIZE],
             padding: vec![],
         }
+    }
+
+    #[test]
+    fn rejects_zero_handler_queue_capacity() {
+        let mut config = ClientConfig::default();
+        config.handler_queue = 0;
+
+        assert_eq!(
+            validate_config(&config),
+            Err(Error::InvalidHandlerQueueCapacity)
+        );
     }
 
     #[test]
