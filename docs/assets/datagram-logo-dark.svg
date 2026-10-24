@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="datagram-avatar-dark-title datagram-avatar-dark-desc">
+  <title id="datagram-avatar-dark-title">Datagram — dark avatar</title>
+  <desc id="datagram-avatar-dark-desc">A white six-vertex diagonal lightning bolt on a graphite rounded square, with clearance for a circular avatar crop.</desc>
+  <rect width="512" height="512" rx="112" fill="#0d1117"/>
+  <path fill="#ffffff" d="M330 88L158 280H244L182 424L354 224H268Z"/>
+</svg>

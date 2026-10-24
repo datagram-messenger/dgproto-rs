@@ -1,5 +1,7 @@
 <div align="center">
 
+<a href="https://github.com/datagram-messenger"><img src="docs/assets/datagram-logo-dark.svg" width="96" height="96" alt="Datagram Messenger" /></a>
+
 # dgproto-rs
 
 **A focused Rust client for the DGProto v1 secure transport protocol.**
