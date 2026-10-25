@@ -90,6 +90,9 @@ pub(crate) mod transport;
 pub mod connection;
 pub mod error;
 
+#[cfg(test)]
+mod error_interop;
+
 // ── Public re-exports — the complete stable API surface ───────────────────────
 
 pub use error::Error;

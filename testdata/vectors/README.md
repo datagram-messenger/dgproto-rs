@@ -2,6 +2,14 @@
 
 The JSON files in this directory are immutable interoperability fixtures containing deterministic wire inputs and expected outputs.
 
+## Error migration scope
+
+The nonempty Error vectors are hand-authored normative raw UTF-8 codec oracles,
+not regenerated output or live encrypted-session evidence. Empty Error alone
+cannot distinguish old TLV from raw encoding. Shared codes are 0–255: Go accepts
+all u16 codes, while Rust's public u8 adapter rejects larger codes after raw
+validation; language-specific tests cover that limitation.
+
 ## Validation levels
 
 Frame-level validation checks bytes, lengths, flags, type, epoch/sequence, payload, padding, tag, and parser rejection. Semantic validation additionally checks protocol state: handshake order, transcript/key agreement, epoch transition, replay acceptance, and message meaning.

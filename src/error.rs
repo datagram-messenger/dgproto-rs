@@ -187,8 +187,9 @@ pub enum Error {
 
     /// An `ErrorMessage` code exceeds the u8 range (0–255) on the wire.
     ///
-    /// The wire field is u16 LE; values above 255 would be silently truncated
-    /// without this check.
+    /// The wire field is u16 LE, but the existing public ErrorMessage API uses
+    /// u8. Values above 255 are valid wire codes that this representation cannot
+    /// hold; narrowing is checked after raw length and UTF-8 validation.
     #[error("dgproto: error message code out of range (must be 0–255)")]
     InvalidErrorCode,
 

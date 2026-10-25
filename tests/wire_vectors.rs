@@ -2,7 +2,7 @@
 //!
 //! Loads every `testdata/vectors/*.json` file and runs each vector through the
 //! corresponding Rust parser and serializer, asserting byte-for-byte identity
-//! with the Go-generated reference bytes.
+//! with the reference bytes, including hand-authored normative raw Error oracles.
 //!
 //! Any failure here is a wire-compatibility regression — fix it before merging.
 //!

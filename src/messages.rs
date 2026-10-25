@@ -50,10 +50,10 @@ pub(crate) const MAX_ENCRYPTED_PAYLOAD_SIZE: usize = MAX_FRAME_SIZE - HEADER_SIZ
 /// Maximum handshake payload size (excludes header; no outer tag).
 pub(crate) const MAX_HANDSHAKE_PAYLOAD_SIZE: usize = MAX_FRAME_SIZE - HEADER_SIZE;
 
-/// Maximum UTF-8 reason/context string size.
+/// Maximum SessionClose UTF-8 TLV reason size.
 pub(crate) const MAX_REASON_SIZE: usize = MAX_ENCRYPTED_PAYLOAD_SIZE - 2 - TLV_HEADER_SIZE - 1;
 
-/// TLV type for the text field in SessionClose and ErrorMessage.
+/// TLV type for the SessionClose text field only.
 const TEXT_TLV_TYPE: u8 = 1;
 
 /// Noise pattern identifier for Noise XX (the only MVP-permitted pattern).
@@ -403,22 +403,25 @@ impl SessionClose {
 
 /// An application-layer error message (type 0x09).
 ///
-/// Wire: `[code u16 LE][text TLV (optional)]`
+/// Wire: `[code u16 LE][raw UTF-8 context]`, without TLV or fallback.
+/// The source-compatible public adapter supports only codes 0–255; larger
+/// wire codes return `Error::InvalidErrorCode` after raw payload validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ErrorMessage {
-    /// Error code (u16 on the wire).
+    /// Error code (u16 on the wire, limited to u8 by this public API).
     pub code: u8,
-    /// Human-readable reason string (valid UTF-8, ≤ `MAX_REASON_SIZE` bytes).
+    /// Raw UTF-8 context, at most 65477 bytes with zero frame padding.
+    /// Subtract actual frame padding from this budget when sending.
     pub reason: String,
 }
 
 impl ErrorMessage {
     pub(crate) fn marshal_binary(&self) -> Result<Vec<u8>, Error> {
-        marshal_text_message(self.code as u16, &self.reason)
+        marshal_error_message(self.code as u16, &self.reason)
     }
 
     pub fn unmarshal_binary(data: &[u8]) -> Result<Self, Error> {
-        let (code_u16, text) = unmarshal_text_message(data)?;
+        let (code_u16, text) = unmarshal_error_message(data)?;
         // Reject wire codes that do not fit in u8 to prevent silent truncation.
         // The wire field is u16 LE; valid error codes are 0–255.
         if code_u16 > u8::MAX as u16 {
@@ -458,10 +461,34 @@ impl TryFrom<u8> for CloseCode {
     }
 }
 
-// ── Shared helpers ────────────────────────────────────────────────────────────
+/// Raw Error context byte budget with zero frame padding; subtract actual padding.
+const MAX_ERROR_CONTEXT_SIZE: usize = MAX_ENCRYPTED_PAYLOAD_SIZE - 2;
+
+fn marshal_error_message(code: u16, text: &str) -> Result<Vec<u8>, Error> {
+    if text.len() > MAX_ERROR_CONTEXT_SIZE {
+        return Err(Error::ReasonTooLong);
+    }
+    let mut buf = Vec::with_capacity(2 + text.len());
+    buf.extend_from_slice(&code.to_le_bytes());
+    buf.extend_from_slice(text.as_bytes());
+    Ok(buf)
+}
+
+fn unmarshal_error_message(data: &[u8]) -> Result<(u16, String), Error> {
+    if data.len() < 2 {
+        return Err(Error::MessageTooShort);
+    }
+    if data.len() > MAX_ENCRYPTED_PAYLOAD_SIZE {
+        return Err(Error::MessageLength);
+    }
+    let text = std::str::from_utf8(&data[2..]).map_err(|_| Error::InvalidUtf8)?;
+    Ok((u16::from_le_bytes([data[0], data[1]]), text.to_owned()))
+}
+
+// ── SessionClose TLV helpers ──────────────────────────────────────────────────
 
 /// Encode a code + optional UTF-8 text into the wire format used by
-/// `SessionClose` and `ErrorMessage`.
+/// `SessionClose` only.
 fn marshal_text_message(code: u16, text: &str) -> Result<Vec<u8>, Error> {
     if !text.is_empty() && !std::str::from_utf8(text.as_bytes()).is_ok() {
         return Err(Error::InvalidUtf8);
@@ -478,7 +505,7 @@ fn marshal_text_message(code: u16, text: &str) -> Result<Vec<u8>, Error> {
     Ok(buf)
 }
 
-/// Decode the wire format used by `SessionClose` and `ErrorMessage`.
+/// Decode the TLV wire format used by `SessionClose` only.
 fn unmarshal_text_message(data: &[u8]) -> Result<(u16, String), Error> {
     if data.len() < 2 {
         return Err(Error::MessageTooShort);
@@ -780,6 +807,67 @@ mod tests {
             SessionClose::unmarshal_binary(&wire),
             Err(Error::InvalidCloseCode)
         ));
+    }
+
+    #[test]
+    fn normative_error_raw_helpers_and_limits() {
+        assert_eq!(marshal_error_message(9, "oops").unwrap(), b"\x09\x00oops");
+        assert_eq!(
+            marshal_error_message(255, "Ошибка").unwrap(),
+            b"\xff\x00\xd0\x9e\xd1\x88\xd0\xb8\xd0\xb1\xd0\xba\xd0\xb0"
+        );
+        assert_eq!(
+            unmarshal_error_message(b"\x34\x12hi").unwrap(),
+            (0x1234, "hi".into())
+        );
+        assert_eq!(marshal_error_message(0x1234, "hi").unwrap(), b"\x34\x12hi");
+        assert!(matches!(
+            ErrorMessage::unmarshal_binary(b"\x34\x12hi"),
+            Err(Error::InvalidErrorCode)
+        ));
+        assert!(matches!(
+            ErrorMessage::unmarshal_binary(b"\x34\x12\xff"),
+            Err(Error::InvalidUtf8)
+        ));
+        for wire in [&b""[..], &b"\x00"[..]] {
+            assert!(matches!(
+                unmarshal_error_message(wire),
+                Err(Error::MessageTooShort)
+            ));
+        }
+        let text = "a".repeat(65477);
+        let wire = marshal_error_message(3, &text).unwrap();
+        assert_eq!(wire.len(), 65479);
+        assert_eq!(unmarshal_error_message(&wire).unwrap(), (3, text.clone()));
+        assert!(matches!(
+            marshal_error_message(3, &(text + "a")),
+            Err(Error::ReasonTooLong)
+        ));
+        let mut oversized = vec![0xff; 65480];
+        oversized[..2].copy_from_slice(&0x1234u16.to_le_bytes());
+        assert!(matches!(
+            ErrorMessage::unmarshal_binary(&oversized),
+            Err(Error::MessageLength)
+        ));
+        assert!(matches!(
+            marshal_error_message(3, &"я".repeat(32739)),
+            Err(Error::ReasonTooLong)
+        ));
+        let mut input = b"\x03\x00hi".to_vec();
+        let decoded = ErrorMessage::unmarshal_binary(&input).unwrap();
+        input.fill(0xff);
+        assert_eq!(decoded.reason, "hi");
+        let old = ErrorMessage::unmarshal_binary(b"\x03\x00\x01\x02\x00hi\x00\x00\x00").unwrap();
+        assert_eq!(old.reason, "\x01\x02\x00hi\x00\x00\x00");
+        assert_eq!(
+            SessionClose {
+                code: CloseCode::ResourceLimit,
+                reason: "hi".into()
+            }
+            .marshal_binary()
+            .unwrap(),
+            b"\x03\x00\x01\x02\x00hi\x00\x00\x00"
+        );
     }
 
     // ── ErrorMessage ──────────────────────────────────────────────────────────

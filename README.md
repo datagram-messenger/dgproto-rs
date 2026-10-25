@@ -173,6 +173,9 @@ protocol is a draft.
 
 ## Documentation
 
+[ErrorMessage wire migration](docs/guides/error-message-migration.md): paired
+rebuild/deploy is required; the public u8 code adapter is not full-u16 interop.
+
 | Resource | Purpose |
 |---|---|
 | [API reference] | Public Rust API documentation on docs.rs. |

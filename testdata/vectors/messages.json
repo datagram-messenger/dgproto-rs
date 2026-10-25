@@ -58,6 +58,50 @@
       "valid": true
     },
     {
+      "name": "message-error-oops",
+      "kind": "message",
+      "message_type": 9,
+      "wire_hex": "09006f6f7073",
+      "valid": true
+    },
+    {
+      "name": "message-error-unicode",
+      "kind": "message",
+      "message_type": 9,
+      "wire_hex": "ff00d09ed188d0b8d0b1d0bad0b0",
+      "valid": true
+    },
+    {
+      "name": "message-error-hi",
+      "kind": "message",
+      "message_type": 9,
+      "wire_hex": "03006869",
+      "valid": true
+    },
+    {
+      "name": "message-error-nul",
+      "kind": "message",
+      "message_type": 9,
+      "wire_hex": "0000610062",
+      "valid": true
+    },
+    {
+      "name": "message-error-short",
+      "kind": "message",
+      "message_type": 9,
+      "wire_hex": "09",
+      "valid": false,
+      "error": "ErrMessageTooShort"
+    },
+    {
+      "name": "message-error-invalid-utf8",
+      "kind": "message",
+      "message_type": 9,
+      "wire_hex": "0300ff",
+      "valid": false,
+      "error": "ErrInvalidUTF8"
+    },
+    {
       "name": "message-error-empty",
       "kind": "message",
       "message_type": 9,
