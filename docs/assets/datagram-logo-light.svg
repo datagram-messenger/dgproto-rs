@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="datagram-avatar-light-title datagram-avatar-light-desc">
+  <title id="datagram-avatar-light-title">Datagram — light avatar</title>
+  <desc id="datagram-avatar-light-desc">The shared Datagram angular D symbol with a lightning-shaped counter, in ink on a warm paper square.</desc>
+  <rect width="512" height="512" fill="#F3F1EB"/>
+  <path fill="#10141D" fill-rule="evenodd" d="M128 104H270L384 218V294L270 408H128ZM278 156L198 266H246L218 358L326 230H274Z"/>
+</svg>

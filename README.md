@@ -1,6 +1,12 @@
 <div align="center">
 
-<a href="https://github.com/datagram-messenger"><img src="docs/assets/datagram-logo-dark.svg" width="96" height="96" alt="Datagram Messenger" /></a>
+<a href="https://github.com/datagram-messenger">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/datagram-logo-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/datagram-logo-light.svg" />
+    <img src="docs/assets/datagram-logo-dark.svg" width="96" height="96" alt="Datagram Messenger" />
+  </picture>
+</a>
 
 # dgproto-rs
 
